@@ -20,3 +20,12 @@ export const jobApplications = pgTable('job_applications', {
   consentGiven: boolean('consent_given').default(false).notNull(),
   appliedAt: timestamp('applied_at').defaultNow(),
 });
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  password: text('password'), // Ye starting mein null rahega jab tak mail se set na ho
+  isVerified: boolean('is_verified').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});

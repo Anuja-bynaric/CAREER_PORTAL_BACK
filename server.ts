@@ -2,8 +2,6 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-import { db } from './src/db';
-import { jobApplications } from './src/db/schema';
 import jobApplicationRoute from './src/routes/jobApplicationRoute';
 
 const app = express();
