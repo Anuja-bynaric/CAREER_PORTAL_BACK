@@ -1,4 +1,7 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum } from 'drizzle-orm/pg-core';
+
+
+export const userRoleEnum = pgEnum('user_role', ['admin',  'user']);
 
 export const jobOpenings = pgTable('job_openings', {
   id: serial('id').primaryKey(),
@@ -23,9 +26,11 @@ export const jobApplications = pgTable('job_applications', {
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  password: text('password'), // Ye starting mein null rahega jab tak mail se set na ho
-  isVerified: boolean('is_verified').default(false),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: text('password').notNull(), // Store hashed passwords only
+  isVerified: boolean('is_verified').default(false).notNull(),
+  role: userRoleEnum('role').default('user').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
