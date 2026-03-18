@@ -1,4 +1,7 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum } from 'drizzle-orm/pg-core';
+
+
+export const userRoleEnum = pgEnum('user_role', ['admin',  'user']);
 
 export const jobOpenings = pgTable('job_openings', {
   id: serial('id').primaryKey(),
@@ -19,4 +22,14 @@ export const jobApplications = pgTable('job_applications', {
   resumeUrl: text('resume_url').notNull(),
   consentGiven: boolean('consent_given').default(false).notNull(),
   appliedAt: timestamp('applied_at').defaultNow(),
+});
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: text('password').notNull(), // Store hashed passwords only
+  role: userRoleEnum('role').default('user').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
