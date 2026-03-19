@@ -4,10 +4,10 @@ import { finalizeApplication } from '../controller/jobApplication';
 
 const router = express.Router();
 
-// Existing route
+
 router.post('/finalize-application', finalizeApplication);
 
-// NEW: Login route
+
 router.post('/login', loginUser);
 
 export default router;

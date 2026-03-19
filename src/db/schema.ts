@@ -11,6 +11,15 @@ export const jobOpenings = pgTable('job_openings', {
   jobType: varchar('job_type', { length: 50 }),
   category: varchar('category', { length: 100 }),
   createdAt: timestamp('created_at').defaultNow(),
+  
+  // NEW COLUMNS ADDED BELOW
+  description: text('description'),
+  
+  // Use .array() for PostgreSQL text arrays
+  requirements: text('requirements').array(), 
+  responsibilities: text('responsibilities').array(),
+  
+  about: text('about'),
 });
 
 export const jobApplications = pgTable('job_applications', {
