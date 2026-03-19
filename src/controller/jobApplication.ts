@@ -2,21 +2,21 @@ import { Request, Response } from 'express';
 import { db } from '../db';
 import { jobApplications, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
-import { 
-  ApplicationFormInput, 
-  NewApplication, 
-  DownloadParams, 
-  ApplicationTokenPayload, 
-  FinalizeApplicationInput 
-} from '../types/jobApplication';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 
+import { 
+  ApplicationFormInput, 
+  ApplicationTokenPayload, 
+  FinalizeApplicationInput,
+  DownloadParams,
+  NewApplication 
+} from '../types/jobApplication';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
-// Email Transporter Configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -27,6 +27,7 @@ const transporter = nodemailer.createTransport({
 
 export const createApplication = async (req: Request, res: Response) => {
   try {
+    
     const body = req.body as ApplicationFormInput;
 
     if (!req.file) {
@@ -38,10 +39,11 @@ export const createApplication = async (req: Request, res: Response) => {
     if (existingUser.length > 0) {
       return res.status(409).json({ 
         success: false, 
-        message: "Mail already exist..Please login and apply" 
+        message: "Email already exists. Please login and apply." 
       });
     }
 
+  
     const tokenData: ApplicationTokenPayload = {
       ...body,
       resumeUrl: req.file.filename
@@ -57,18 +59,16 @@ export const createApplication = async (req: Request, res: Response) => {
       html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
           <h2>Hello ${body.fullName},</h2>
-          <p>Thank you for applying. To complete your application, please set your account password by clicking the button below:</p>
+          <p>Thank you for applying. To complete your application, please set your account password:</p>
           <a href="${setupLink}" style="background: #e11d48; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Click here to set your password</a>
-          <p style="margin-top: 20px; color: #666;">This link will expire in 1 hour.</p>
         </div>
       `
     });
 
-    // UPDATED: Sending the token back to the frontend
     res.status(200).json({ 
       success: true, 
       message: "Verification email sent!",
-      token: token // <--- Pass this to frontend
+      token: token 
     });
 
   } catch (error: any) {
@@ -81,31 +81,33 @@ export const finalizeApplication = async (req: Request, res: Response) => {
   try {
     const { token, password } = req.body as FinalizeApplicationInput;
 
-    // 1. Verify and decode the token
+    
     const decoded = jwt.verify(token, JWT_SECRET) as ApplicationTokenPayload;
 
-    // 2. Hash the new password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Database Transaction: Create User + Save Application
+   
+   
+    const newAppData: NewApplication = {
+      jobId: Number(decoded.jobId),
+      fullName: decoded.fullName,
+      emailAddress: decoded.emailAddress,
+      phoneNumber: decoded.phoneNumber,
+      resumeUrl: decoded.resumeUrl,
+      consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
+    };
+
     const result = await db.transaction(async (tx) => {
-      // Create User
+      
       await tx.insert(users).values({
         name: decoded.fullName,
         email: decoded.emailAddress,
         password: hashedPassword,
-        role: 'user', // Default role
+        role: 'user',
       });
 
-      // Create Application
-      const appEntry = await tx.insert(jobApplications).values({
-        jobId: Number(decoded.jobId),
-        fullName: decoded.fullName,
-        emailAddress: decoded.emailAddress,
-        phoneNumber: decoded.phoneNumber,
-        resumeUrl: decoded.resumeUrl,
-        consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
-      }).returning();
+      
+      const appEntry = await tx.insert(jobApplications).values(newAppData).returning();
 
       return appEntry[0];
     });
