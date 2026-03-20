@@ -1,18 +1,18 @@
 import { Request, Response } from 'express';
 import { db } from '../db';
 import { jobApplications, users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 
-import { 
-  ApplicationFormInput, 
-  ApplicationTokenPayload, 
+import {
+  ApplicationFormInput,
+  ApplicationTokenPayload,
   FinalizeApplicationInput,
   DownloadParams,
-  NewApplication 
+  NewApplication
 } from '../types/jobApplication';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
@@ -27,23 +27,43 @@ const transporter = nodemailer.createTransport({
 
 export const createApplication = async (req: Request, res: Response) => {
   try {
-    
+
     const body = req.body as ApplicationFormInput;
 
+    // console.log("Request Body:", body);
+    // console.log("Request File:", req.file);
+
     if (!req.file) {
-      return res.status(400).json({ success: false, error: "Resume file is missing." });
+      return res.status(400).json({ success: false, message: "Resume file is missing." });
     }
 
     const existingUser = await db.select().from(users).where(eq(users.email, body.emailAddress)).limit(1);
-    
+
     if (existingUser.length > 0) {
-      return res.status(409).json({ 
-        success: false, 
-        message: "Email already exists. Please login and apply." 
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists. Please login and apply."
       });
     }
 
-  
+    // Prevent duplicate applications: same email + same jobId
+    const existingApplication = await db
+      .select()
+      .from(jobApplications)
+      .where(and(
+        eq(jobApplications.email, body.emailAddress),
+        eq(jobApplications.jobId, Number(body.jobId))
+      ))
+      .limit(1);
+
+    if (existingApplication.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "You have already applied for this job."
+      });
+    }
+
+
     const tokenData: ApplicationTokenPayload = {
       ...body,
       resumeUrl: req.file.filename
@@ -65,15 +85,15 @@ export const createApplication = async (req: Request, res: Response) => {
       `
     });
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       message: "Verification email sent!",
-      token: token 
+      token: token
     });
 
   } catch (error: any) {
     console.error("Application Error:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
@@ -81,32 +101,33 @@ export const finalizeApplication = async (req: Request, res: Response) => {
   try {
     const { token, password } = req.body as FinalizeApplicationInput;
 
-    
+
     const decoded = jwt.verify(token, JWT_SECRET) as ApplicationTokenPayload;
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-   
-   
+
+
     const newAppData: NewApplication = {
       jobId: Number(decoded.jobId),
       fullName: decoded.fullName,
-      emailAddress: decoded.emailAddress,
+      email: decoded.emailAddress,
       phoneNumber: decoded.phoneNumber,
       resumeUrl: decoded.resumeUrl,
       consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
     };
 
     const result = await db.transaction(async (tx) => {
-      
+
       await tx.insert(users).values({
         name: decoded.fullName,
         email: decoded.emailAddress,
         password: hashedPassword,
-        role: 'user',
+        phoneNumber: decoded.phoneNumber,
+        role: 'candidate',
       });
 
-      
+
       const appEntry = await tx.insert(jobApplications).values(newAppData).returning();
 
       return appEntry[0];
@@ -133,4 +154,29 @@ export const downloadResume = (req: Request<DownloadParams>, res: Response) => {
       res.status(404).json({ success: false, message: "File not found." });
     }
   });
+};
+
+export const updateApplicationStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    if (!['pending', 'shortlisted', 'rejected', 'hired'].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value." });
+    }
+
+    const updatedApp = await db.update(jobApplications)
+      .set({ status, notes })
+      .where(eq(jobApplications.id, Number(id)))
+      .returning();
+
+    if (updatedApp.length === 0) {
+      return res.status(404).json({ success: false, message: "Application not found." });
+    }
+
+    res.status(200).json({ success: true, message: `Application status updated to ${status}`, data: updatedApp[0] });
+  } catch (error) {
+    console.error("Update Application Status Error:", error);
+    res.status(500).json({ success: false, message: "Failed to update application status." });
+  }
 };

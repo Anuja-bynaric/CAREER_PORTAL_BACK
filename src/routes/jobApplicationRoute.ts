@@ -1,26 +1,44 @@
 import { Router } from "express";
-import { createApplication, downloadResume, finalizeApplication } from '../controller/jobApplication';
+import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus } from '../controller/jobApplication';
 import { upload } from '../../config/multer';
-import { applyJob, setPassword } from "../controller/user.controller";
+import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
+import {setPassword } from "../controller/user.controller";
 
 const router = Router();
 
-<<<<<<< HEAD
 // Endpoint: POST /user/applyJob
-router.post('/applyJob', createApplication);
-router.post('/apply', applyJob);
+//router.post('/applyJob', createApplication);
+// router.post('/apply', applyJob);
 router.post('/set-password', setPassword);
 
 // Notice 'resume' here - this must match the key in Postman/Frontend
 // This step sends the email
-=======
 
->>>>>>> Career_portal_backend
-router.post('/applyJob', upload.single('resume'), createApplication);
+router.post('/applyJob', (req, res, next) => {
+    upload.single('resume')(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+                console.error("Multer Unexpected Field Error. Field:", err.field);
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Unexpected field: ${err.field}. Expected 'resume'.` 
+                });
+            }
+            return res.status(400).json({ 
+                success: false, 
+                message: err.message || "File upload error" 
+            });
+        }
+        next();
+    });
+}, createApplication);
 
 
 router.post('/finalize-application', finalizeApplication);
 
 router.get('/resume/:filename', downloadResume);
+
+// HR Only Route
+router.patch('/:id/status', verifyToken, isHRAdmin, updateApplicationStatus);
 
 export default router;

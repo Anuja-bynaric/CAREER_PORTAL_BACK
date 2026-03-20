@@ -9,19 +9,21 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
-    const { emailAddress, password } = req.body;
+    const { email, password } = req.body;
 
     // 1. Find user by email
-    const foundUsers = await db.select().from(users).where(eq(users.email, emailAddress)).limit(1);
+    const foundUsers = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
     if (foundUsers.length === 0) {
       return res.status(401).json({ success: false, message: "Invalid email or password." });
     }
 
     const user = foundUsers[0];
+    
 
     // 2. Verify Password
     const isMatch = await bcrypt.compare(password, user.password);
+    // console.log(isMatch);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: "Invalid email or password." });
     }
