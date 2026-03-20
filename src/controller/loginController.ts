@@ -29,7 +29,7 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     // 3. Generate Token (Optional but recommended for session persistence)
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
 
     // 4. Return user data (matching the keys your frontend expects)
     res.status(200).json({
@@ -38,6 +38,7 @@ export const loginUser = async (req: Request, res: Response) => {
       user: {
         name: user.name,
         email: user.email,
+        role: user.role,
       }
     });
 
