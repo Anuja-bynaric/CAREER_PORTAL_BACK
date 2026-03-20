@@ -15,6 +15,7 @@ export const createJob = async (req: Request, res: Response) => {
 
     const newJob = await db.insert(jobOpenings).values({
       title,
+      jobId: `job_${Date.now()}`, // Generate a unique job ID
       location,
       experience,
       jobType,
@@ -54,6 +55,23 @@ export const getAllJobs = async (req: Request, res: Response) => {
   }
 };
 
+export const getJobById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const job = await db.select().from(jobOpenings).where(eq(jobOpenings.id, Number(id))).limit(1);
+    console.log("Fetched Job:", job);
+
+    if (job.length === 0) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    res.status(200).json({ success: true, data: job[0] });
+  } catch (error) {
+    console.error("Fetch Job Error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch job opening." });
+  }
+};
 
 export const searchJobs = async (req: Request, res: Response) => {
   try {

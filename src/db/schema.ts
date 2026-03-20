@@ -4,9 +4,11 @@ import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum, un
 export const userRoleEnum = pgEnum('user_role', ['admin', 'hr', 'candidate', 'interviewer', 'user']);
 export const applicationStatusEnum = pgEnum('application_status', ['pending', 'shortlisted', 'rejected', 'hired']);
 export const interviewStatusEnum = pgEnum('interview_status', ['scheduled', 'completed', 'cancelled']);
+export const interviewTypeEnum = pgEnum('interview_type', ['Online', 'Face to Face', 'Calendly']);
 
 export const jobOpenings = pgTable('job_openings', {
   id: serial('id').primaryKey(),
+  jobId: varchar('job_id', { length: 50 }).unique().notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   location: varchar('location', { length: 100 }).notNull(),
   experience: varchar('experience', { length: 50 }),
@@ -57,8 +59,10 @@ export const interviews = pgTable('interviews', {
   jobApplicationId: integer('job_application_id').references(() => jobApplications.id, { onDelete: 'cascade' }).notNull(),
   interviewerId: integer('interviewer_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   scheduledAt: timestamp('scheduled_at').notNull(),
+  interviewType: interviewTypeEnum('interview_type').default('Online').notNull(),
+  location: varchar('location', { length: 500 }), // for Face to Face interviews
+  meetingLink: text('meeting_link'),               // for Online interviews
   status: interviewStatusEnum('status').default('scheduled').notNull(),
-  meetingLink: text('meeting_link'),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
 });
