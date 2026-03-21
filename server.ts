@@ -1,6 +1,7 @@
 import 'dotenv/config'; // MUST BE AT TOP
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import jobApplicationRoute from './src/routes/jobApplicationRoute';
 import loginRoute from './src/routes/loginRoute'
@@ -13,7 +14,11 @@ import interviewerRoute from './src/routes/interviewerRoute';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Adjust to your frontend URL
+  credentials: true
+}));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

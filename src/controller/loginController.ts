@@ -31,10 +31,17 @@ export const loginUser = async (req: Request, res: Response) => {
     // 3. Generate Token (Optional but recommended for session persistence)
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
 
-    // 4. Return user data (matching the keys your frontend expects)
+    // 4. Set token in cookie
+    res.cookie('token', token, {
+      httpOnly: true, // Prevents JavaScript access
+      secure: process.env.NODE_ENV === 'production', // Use HTTPS in production
+      sameSite: 'strict', // CSRF protection
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    // 5. Return user data (without token in response)
     res.status(200).json({
       success: true,
-      token,
       user: {
         name: user.name,
         email: user.email,
@@ -46,4 +53,9 @@ export const loginUser = async (req: Request, res: Response) => {
     console.error("Login Error:", error);
     res.status(500).json({ success: false, message: "Internal server error." });
   }
+};
+
+export const logoutUser = (req: Request, res: Response) => {
+  res.clearCookie('token');
+  res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
