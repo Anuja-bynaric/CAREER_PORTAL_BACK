@@ -548,3 +548,80 @@ export const getInterviews = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Failed to fetch interviews.' });
   }
 };
+
+export const getInterviewById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const interview = await db
+      .select()
+      .from(interviews)
+      .where(eq(interviews.id, Number(id)))
+      .limit(1);
+
+    if (interview.length === 0) {
+      return res.status(404).json({ success: false, message: 'Interview not found.' });
+    }
+
+    res.status(200).json({ success: true, data: interview[0] });
+  } catch (error) {
+    console.error('Get Interview Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch interview.' });
+  }
+};
+
+export const getInterviewsByApplication = async (req: Request, res: Response) => {
+  try {
+    const { applicationId } = req.params;
+
+    const applicationInterviews = await db
+      .select()
+      .from(interviews)
+      .where(eq(interviews.jobApplicationId, Number(applicationId)))
+      .orderBy(interviews.scheduledAt);
+
+    res.status(200).json({
+      success: true,
+      count: applicationInterviews.length,
+      data: applicationInterviews
+    });
+  } catch (error) {
+    console.error('Get Interviews by Application Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch interviews for application.' });
+  }
+};
+
+export const cancelInterview = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { cancellationReason } = req.body;
+
+    const interview = await db
+      .select()
+      .from(interviews)
+      .where(eq(interviews.id, Number(id)))
+      .limit(1);
+
+    if (interview.length === 0) {
+      return res.status(404).json({ success: false, message: 'Interview not found.' });
+    }
+
+    const updatedInterview = await db
+      .update(interviews)
+      .set({
+        status: 'cancelled',
+        notes: cancellationReason ? `CANCELLED: ${cancellationReason}` : 'Interview cancelled'
+      })
+      .where(eq(interviews.id, Number(id)))
+      .returning();
+
+    res.status(200).json({
+      success: true,
+      message: 'Interview cancelled successfully',
+      data: updatedInterview[0]
+    });
+  } catch (error) {
+    console.error('Cancel Interview Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to cancel interview.' });
+  }
+};

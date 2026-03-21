@@ -42,6 +42,7 @@ export const jobApplications = pgTable('job_applications', {
   uniqueApplicationPerJob: uniqueIndex('unique_application_per_job').on(table.email, table.jobId),
 }));
 
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
