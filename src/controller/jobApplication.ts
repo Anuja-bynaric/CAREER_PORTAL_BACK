@@ -46,6 +46,10 @@ export const createApplication = async (req: Request, res: Response) => {
       });
     }
 
+    // if Email Aleady Exists in user then what
+
+    
+
     // Prevent duplicate applications: same email + same jobId
     const existingApplication = await db
       .select()

@@ -15,12 +15,11 @@ export interface AuthRequest extends Request {
 
 export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = req.cookies.token;
+    if (!token) {
       return res.status(401).json({ success: false, message: 'No token provided' });
     }
 
-    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     // console.log(decoded)
     
