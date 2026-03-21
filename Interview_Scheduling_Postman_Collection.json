@@ -1,0 +1,400 @@
+{
+  "info": {
+    "name": "Career Portal - Interview Scheduling API",
+    "description": "Postman collection for testing interview scheduling functionality with Google Calendar integration",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "interview-scheduling-api"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login as HR Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hr@bynaric.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login as HR Admin to get authentication token for interview scheduling"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('auth_token', response.data.token);",
+                  "    console.log('Auth token saved:', response.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Job Applications",
+      "item": [
+        {
+          "name": "Get All Job Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/applications",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "applications"
+              ]
+            },
+            "description": "Get all job applications to find application IDs for scheduling interviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Get all users to find interviewer IDs for scheduling interviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Interview Scheduling",
+      "item": [
+        {
+          "name": "Schedule Online Interview (Google Meet)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobApplicationId\": 1,\n  \"interviewerId\": 2,\n  \"interviewType\": \"Online\",\n  \"scheduledAt\": \"2024-12-25T10:00:00Z\",\n  \"durationMinutes\": 60,\n  \"notes\": \"Technical interview focusing on React, Node.js, and system design\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/schedule",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "schedule"
+              ]
+            },
+            "description": "Schedule an online interview with automatic Google Meet link generation"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('interview_id', response.data.id);",
+                  "    console.log('Interview scheduled with ID:', response.data.id);",
+                  "    console.log('Meeting link:', response.data.meetingLink);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Schedule Face-to-Face Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobApplicationId\": 1,\n  \"interviewerId\": 2,\n  \"interviewType\": \"Face to Face\",\n  \"scheduledAt\": \"2024-12-26T14:00:00Z\",\n  \"durationMinutes\": 90,\n  \"location\": \"Conference Room A, Bynaric Office\",\n  \"notes\": \"HR round interview with behavioral questions\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/schedule",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "schedule"
+              ]
+            },
+            "description": "Schedule a face-to-face interview at a physical location"
+          }
+        },
+        {
+          "name": "Schedule Calendly Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobApplicationId\": 1,\n  \"interviewerId\": 2,\n  \"interviewType\": \"Calendly\",\n  \"calendlyEventTypeUrl\": \"https://calendly.com/interviewer/technical-interview\",\n  \"notes\": \"Candidate will select preferred time slot via Calendly\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/schedule",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "schedule"
+              ]
+            },
+            "description": "Schedule a Calendly-based interview where candidate selects their preferred time"
+          }
+        },
+        {
+          "name": "Update Interview Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\",\n  \"remarks\": \"Candidate performed well, strong technical skills, recommended for next round\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/{{interview_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "{{interview_id}}",
+                "status"
+              ]
+            },
+            "description": "Update the status of a scheduled interview"
+          }
+        },
+        {
+          "name": "Get All Interviews",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                ""
+              ]
+            },
+            "description": "Retrieve all scheduled interviews"
+          }
+        },
+        {
+          "name": "Get Interview by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/{{interview_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "{{interview_id}}"
+              ]
+            },
+            "description": "Get details of a specific interview by ID"
+          }
+        },
+        {
+          "name": "Get Interviews by Application",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/application/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "application",
+                "1"
+              ]
+            },
+            "description": "Get all interviews for a specific job application"
+          }
+        },
+        {
+          "name": "Cancel Interview",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cancellationReason\": \"Candidate requested rescheduling due to time zone difference\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/interviews/{{interview_id}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "interviews",
+                "{{interview_id}}",
+                "cancel"
+              ]
+            },
+            "description": "Cancel a scheduled interview with reason"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set base URL if not set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:5000');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "interview_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

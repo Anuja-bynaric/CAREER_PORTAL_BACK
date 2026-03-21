@@ -223,3 +223,44 @@ export const deleteInterviewer = async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, message: "Failed to delete Interviewer." });
     }
 };
+
+export const getAllCandidates = async (req: Request, res: Response) => {
+    try {
+        const candidatesList = await db.select({    
+            id: users.id,
+            name: users.name,
+            email: users.email, 
+            phoneNumber: users.phoneNumber,
+            isVerified: users.isVerified,
+            createdAt: users.createdAt
+        }).from(users).where(eq(users.role, 'candidate'));  
+
+        return res.status(200).json({ success: true, count: candidatesList.length, data: candidatesList });
+    } catch (error) {
+        console.error("Fetch Candidates Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to fetch candidates." });
+    }
+};
+
+export const getCandidateById = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const candidate = await db.select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            phoneNumber: users.phoneNumber,
+            isVerified: users.isVerified,
+
+        }).from(users).where(and(eq(users.id, Number(id)), eq(users.role, 'candidate')));
+
+        if (candidate.length === 0) {
+            return res.status(404).json({ success: false, message: "Candidate not found" });
+        }
+
+        return res.status(200).json({ success: true, data: candidate[0] });
+    } catch (error) {
+        console.error("Fetch Candidate Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to fetch candidate." });
+    }   
+};

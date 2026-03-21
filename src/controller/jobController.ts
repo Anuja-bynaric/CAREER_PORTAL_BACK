@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { db } from '../db'; // Your db connection
 import { jobOpenings } from '../db/schema';
 import { desc } from 'drizzle-orm';
-
 import { ilike, and, or, eq } from 'drizzle-orm';
 
 export const createJob = async (req: Request, res: Response) => {
