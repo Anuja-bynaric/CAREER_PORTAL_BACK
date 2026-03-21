@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus } from '../controller/jobApplication';
+import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId } from '../controller/jobApplication';
 import { upload } from '../../config/multer';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 import {setPassword } from "../controller/user.controller";
@@ -40,5 +40,8 @@ router.get('/resume/:filename', downloadResume);
 
 // HR Only Route
 router.patch('/:id/status', verifyToken, isHRAdmin, updateApplicationStatus);
+
+// Get candidates by jobId
+router.get('/job/:jobId/candidates', verifyToken, isHRAdmin, getCandidatesByJobId);
 
 export default router;

@@ -78,6 +78,31 @@
             },
             "description": "Get all job applications to find application IDs for scheduling interviews"
           }
+        },
+        {
+          "name": "Get Candidates by Job ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/job/job_1234567890/candidates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "user",
+                "job",
+                "job_1234567890",
+                "candidates"
+              ]
+            },
+            "description": "Get all candidates who applied for a specific job using the jobId"
+          }
         }
       ]
     },

@@ -48,6 +48,49 @@ Content-Type: application/json
 - `calendlyEventUrl` (optional for Calendly): Direct Calendly event URL
 - `calendlyEventTypeUrl` (optional for Calendly): Calendly event type URL
 
+### Get Candidates by Job ID
+**Endpoint:** `GET /user/job/:jobId/candidates`
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**URL Parameters:**
+- `jobId` (required): The job ID (e.g., "job_1234567890")
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Found 3 candidate(s) for job job_1234567890",
+  "count": 3,
+  "data": [
+    {
+      "id": 1,
+      "fullName": "John Doe",
+      "email": "john.doe@example.com",
+      "phoneNumber": "+1234567890",
+      "resumeUrl": "uploads/resumes/resume_123.pdf",
+      "consentGiven": true,
+      "appliedAt": "2024-12-20T08:00:00.000Z",
+      "status": "pending",
+      "notes": null,
+      "jobId": "job_1234567890"
+    }
+  ]
+}
+```
+
+**Error Response (No candidates found):**
+```json
+{
+  "success": false,
+  "message": "No candidates found for this job.",
+  "data": []
+}
+```
+
 ### Update Interview Status
 **Endpoint:** `PATCH /admin/interviews/:id/status`
 
