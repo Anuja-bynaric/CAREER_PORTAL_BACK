@@ -7,10 +7,10 @@ const router = express.Router();
 
 router.get('/all/jobs', getAllJobs);
 router.get('/search', searchJobs);
-router.get('/jobs/:id', getJobById);
+router.get('/jobs/:jobId', getJobById);
 router.post('/create/jobs', verifyToken, isHRAdmin, createJob);
 
-router.put('/update/jobs/:id', verifyToken, isHRAdmin, updateJob);
-router.delete('/delete/jobs/:id', verifyToken, isHRAdmin, deleteJob);
+router.put('/update/jobs/:jobId', verifyToken, isHRAdmin, updateJob);
+router.delete('/delete/jobs/:jobId', verifyToken, isHRAdmin, deleteJob);
 
 export default router;

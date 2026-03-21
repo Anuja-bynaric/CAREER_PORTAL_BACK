@@ -56,7 +56,7 @@ export const createApplication = async (req: Request, res: Response) => {
       .from(jobApplications)
       .where(and(
         eq(jobApplications.email, body.emailAddress),
-        eq(jobApplications.jobId, Number(body.jobId))
+        eq(jobApplications.jobId, String(body.jobId))
       ))
       .limit(1);
 
@@ -113,7 +113,7 @@ export const finalizeApplication = async (req: Request, res: Response) => {
 
 
     const newAppData: NewApplication = {
-      jobId: Number(decoded.jobId),
+      jobId: String(decoded.jobId),
       fullName: decoded.fullName,
       email: decoded.emailAddress,
       phoneNumber: decoded.phoneNumber,

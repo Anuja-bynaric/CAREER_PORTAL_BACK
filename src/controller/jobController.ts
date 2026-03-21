@@ -57,9 +57,9 @@ export const getAllJobs = async (req: Request, res: Response) => {
 
 export const getJobById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { jobId } = req.params;
 
-    const job = await db.select().from(jobOpenings).where(eq(jobOpenings.id, Number(id))).limit(1);
+    const job = await db.select().from(jobOpenings).where(eq(jobOpenings.jobId, jobId)).limit(1);
     console.log("Fetched Job:", job);
 
     if (job.length === 0) {
@@ -105,12 +105,12 @@ export const searchJobs = async (req: Request, res: Response) => {
 
 export const updateJob = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { jobId } = req.params;
     const updateData = req.body;
 
     const updatedJob = await db.update(jobOpenings)
       .set(updateData)
-      .where(eq(jobOpenings.id, Number(id)))
+      .where(eq(jobOpenings.jobId, jobId))
       .returning();
 
     if (updatedJob.length === 0) {
@@ -126,10 +126,10 @@ export const updateJob = async (req: Request, res: Response) => {
 
 export const deleteJob = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { jobId } = req.params;
 
     const deletedJob = await db.delete(jobOpenings)
-      .where(eq(jobOpenings.id, Number(id)))
+      .where(eq(jobOpenings.jobId, jobId))
       .returning();
 
     if (deletedJob.length === 0) {

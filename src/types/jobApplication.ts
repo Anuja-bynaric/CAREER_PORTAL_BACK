@@ -8,7 +8,7 @@ export interface ApplicationFormInput {
   fullName: string;
   emailAddress: string;
   phoneNumber: string;
-  jobId: string | number; 
+  jobId: string; 
   consentGiven: string | boolean; 
 }
 
