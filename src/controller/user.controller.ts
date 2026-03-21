@@ -1,5 +1,5 @@
 import { eq, or, and } from 'drizzle-orm';
-import { users } from '../db/schema';
+import { jobApplications, users } from '../db/schema';
 import { db } from '../db';
 import { Request, Response } from 'express';
 import { transporter } from '../utils/mailer';
@@ -242,25 +242,3 @@ export const getAllCandidates = async (req: Request, res: Response) => {
     }
 };
 
-export const getCandidateById = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const candidate = await db.select({
-            id: users.id,
-            name: users.name,
-            email: users.email,
-            phoneNumber: users.phoneNumber,
-            isVerified: users.isVerified,
-
-        }).from(users).where(and(eq(users.id, Number(id)), eq(users.role, 'candidate')));
-
-        if (candidate.length === 0) {
-            return res.status(404).json({ success: false, message: "Candidate not found" });
-        }
-
-        return res.status(200).json({ success: true, data: candidate[0] });
-    } catch (error) {
-        console.error("Fetch Candidate Error:", error);
-        return res.status(500).json({ success: false, message: "Failed to fetch candidate." });
-    }   
-};

@@ -184,3 +184,49 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Failed to update application status." });
   }
 };
+
+export const getCandidatesByJobId = async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return res.status(400).json({ success: false, message: "jobId is required." });
+    }
+
+    // Fetch all applications for the given jobId
+    const applications = await db
+      .select({
+        id: jobApplications.id,
+        fullName: jobApplications.fullName,
+        email: jobApplications.email,
+        phoneNumber: jobApplications.phoneNumber,
+        resumeUrl: jobApplications.resumeUrl,
+        consentGiven: jobApplications.consentGiven,
+        appliedAt: jobApplications.appliedAt,
+        status: jobApplications.status,
+        notes: jobApplications.notes,
+        jobId: jobApplications.jobId
+      })
+      .from(jobApplications)
+      .where(eq(jobApplications.jobId, jobId)) 
+      .orderBy(jobApplications.appliedAt);
+
+    if (applications.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No candidates found for this job.",
+        data: []
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Found ${applications.length} candidate(s) for job ${jobId}`,
+      count: applications.length,
+      data: applications
+    });
+  } catch (error) {
+    console.error("Get Candidates by JobId Error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch candidates for this job." });
+  }
+};

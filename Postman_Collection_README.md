@@ -34,7 +34,8 @@ Create a new environment in Postman with these variables:
 
 #### Step 2: Get Reference Data
 1. Run "Get All Job Applications" to find valid `jobApplicationId`
-2. Run "Get All Users" to find valid `interviewerId`
+2. Run "Get Candidates by Job ID" to see candidates for a specific job
+3. Run "Get All Users" to find valid `interviewerId`
 
 #### Step 3: Schedule Interviews
 Choose one of the scheduling requests:
@@ -128,7 +129,8 @@ Career Portal - Interview Scheduling API
 ├── Authentication
 │   └── Login as HR Admin
 ├── Job Applications
-│   └── Get All Job Applications
+│   ├── Get All Job Applications
+│   └── Get Candidates by Job ID
 ├── Users
 │   └── Get All Users
 └── Interview Scheduling
