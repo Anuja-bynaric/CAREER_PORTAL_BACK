@@ -21,7 +21,8 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use('/user', jobApplicationRoute);
 app.use('/user', loginRoute);
-app.use('/admin',jobRoute)
+app.use('/admin', jobApplicationRoute);
+app.use('/admin', jobRoute)
 app.use('/admin/interviews', interviewRoute);
 app.use('/admin/interviewers', interviewerRoute);
 app.listen(PORT, () => {
