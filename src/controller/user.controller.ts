@@ -169,7 +169,8 @@ export const getAllInterviewers = async (req: Request, res: Response) => {
             email: users.email,
             role: users.role,
             isVerified: users.isVerified,
-            createdAt: users.createdAt
+            createdAt: users.createdAt,
+            phoneNumber: users.phoneNumber
         }).from(users).where(eq(users.role, 'interviewer'));
 
         return res.status(200).json({ success: true, count: interviewersList.length, data: interviewersList });
@@ -182,15 +183,16 @@ export const getAllInterviewers = async (req: Request, res: Response) => {
 export const updateInterviewer = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, email } = req.body;
+        const { name, email, phoneNumber } = req.body;
 
         const updatedUser = await db.update(users)
-            .set({ name, email })
+            .set({ name, email, phoneNumber })
             .where(and(eq(users.id, Number(id)), eq(users.role, 'interviewer')))
             .returning({
                 id: users.id,
                 name: users.name,
                 email: users.email,
+                phoneNumber: users.phoneNumber,
                 role: users.role
             });
 
@@ -239,6 +241,50 @@ export const getAllCandidates = async (req: Request, res: Response) => {
     } catch (error) {
         console.error("Fetch Candidates Error:", error);
         return res.status(500).json({ success: false, message: "Failed to fetch candidates." });
+    }
+};
+
+export const getCandidateById = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // Fetch candidate user details
+        const candidate = await db.select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            phoneNumber: users.phoneNumber,
+            isVerified: users.isVerified,
+            createdAt: users.createdAt
+        }).from(users).where(and(eq(users.id, Number(id)), eq(users.role, 'candidate'))).limit(1);
+
+        if (candidate.length === 0) {
+            return res.status(404).json({ success: false, message: "Candidate not found." });
+        }
+
+        // Fetch candidate's job applications
+        const applications = await db.select({
+            id: jobApplications.id,
+            jobId: jobApplications.jobId,
+            fullName: jobApplications.fullName,
+            email: jobApplications.email,
+            phoneNumber: jobApplications.phoneNumber,
+            resumeUrl: jobApplications.resumeUrl,
+            status: jobApplications.status,
+            appliedAt: jobApplications.appliedAt,
+            notes: jobApplications.notes
+        }).from(jobApplications).where(eq(jobApplications.email, candidate[0].email));
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                ...candidate[0],
+                applications: applications
+            }
+        });
+    } catch (error) {
+        console.error("Fetch Candidate by ID Error:", error);
+        return res.status(500).json({ success: false, message: "Failed to fetch candidate." });
     }
 };
 
