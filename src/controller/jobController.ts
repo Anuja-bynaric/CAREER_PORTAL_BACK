@@ -141,3 +141,27 @@ export const deleteJob = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "Failed to delete job opening." });
   }
 };
+
+export const changeJobStatus = async (req: Request, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const { status } = req.body;
+    if (!['open', 'closed'].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value. Must be 'open' or 'closed'." });
+
+    }
+    const updatedJob = await db.update(jobOpenings)
+      .set({ status })
+      .where(eq(jobOpenings.jobId, jobId))
+      .returning();
+
+
+    if (updatedJob.length === 0) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    } 
+    res.status(200).json({ success: true, message: `Job status updated to ${status}`, data: updatedJob[0] });
+  } catch (error) {
+    console.error("Change Job Status Error:", error);
+    res.status(500).json({ success: false, message: "Failed to change job status." });
+  }
+};
