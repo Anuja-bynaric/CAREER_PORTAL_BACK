@@ -49,6 +49,17 @@ Choose one of the scheduling requests:
 - Cancel interviews
 - View all interviews
 
+#### Step 5: Verify Google Calendar Scheduling
+1. After running "Schedule Online Interview (Google Meet)", confirm response status is `201`.
+2. In the response JSON, ensure `data.meetingLink` is present and starts with `https://meet.google.com/`.
+3. (Optional) Visit your Google Calendar and confirm the event exists at the requested `scheduledAt` date/time, with the same title and email attendees.
+4. If you don’t see the event in your calendar, re-check environment variables:
+   - `GOOGLE_PRIVATE_KEY`
+   - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+   - `GOOGLE_CALENDAR_ID`
+   - `GOOGLE_PROJECT_ID`
+5. If API response fails, copy the error message and troubleshoot with server logs; common issue is missing service account calendar permission.
+
 ## Request Examples
 
 ### Schedule Online Interview

@@ -1,10 +1,16 @@
 import { google } from 'googleapis';
 
+
+
+  console.log("privateKey:", process.env.GOOGLE_PRIVATE_KEY);
+  console.log("serviceAccountEmail:", process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+  console.log("calendarId:", process.env.GOOGLE_CALENDAR_ID);
 // Initialize the Google Calendar API with Service Account credentials
 const getCalendarClient = () => {
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const calendarId = process.env.GOOGLE_CALENDAR_ID;
+
 
   if (!privateKey || !serviceAccountEmail || !calendarId) {
     throw new Error(
@@ -12,7 +18,9 @@ const getCalendarClient = () => {
     );
   }
 
-  const auth = new google.auth.GoogleAuth({
+  const impersonateEmail = process.env.GOOGLE_IMPERSONATE_EMAIL; // Optional for domain-wide delegation
+
+  const authOptions: any = {
     credentials: {
       type: 'service_account',
       project_id: process.env.GOOGLE_PROJECT_ID,
@@ -24,7 +32,13 @@ const getCalendarClient = () => {
       token_uri: 'https://oauth2.googleapis.com/token',
     },
     scopes: ['https://www.googleapis.com/auth/calendar'],
-  });
+  };
+
+  if (impersonateEmail) {
+    authOptions.clientOptions = { subject: impersonateEmail };
+  }
+
+  const auth = new google.auth.GoogleAuth(authOptions);
 
   return {
     calendar: google.calendar({ version: 'v3', auth }),
@@ -46,6 +60,7 @@ interface CreateMeetEventParams {
  * @returns The generated Google Meet link URL
  */
 export const createMeetEvent = async (params: CreateMeetEventParams): Promise<string> => {
+  console.log('🔍 createMeetEvent called with params:', params);
   try {
     const { calendar, calendarId } = getCalendarClient();
     const { title, scheduledAt, durationMinutes, attendeeEmails, description } = params;
@@ -116,8 +131,16 @@ export const createMeetEvent = async (params: CreateMeetEventParams): Promise<st
     console.log(`✅ Google Calendar event created with Meet link: ${meetLink}`);
     return meetLink;
   } catch (error: any) {
-    console.error('❌ Error creating Google Meet event:', error.message);
-    throw new Error(`Failed to create Google Meet event: ${error.message}`);
+    const apiError = error.response?.data || error;
+    console.error('❌ Error creating Google Meet event:', JSON.stringify(apiError, null, 2));
+
+    // If we have detail errors, include them in the thrown message for better client logging.
+    const detailedMessage = apiError?.error?.message || apiError?.message || 'Unknown error';
+    const detailErrors = apiError?.error?.errors
+      ? apiError.error.errors.map((e: any) => `[${e.domain}] ${e.reason}: ${e.message}`).join('; ')
+      : '';
+
+    throw new Error(`Failed to create Google Meet event: ${detailedMessage}${detailErrors ? ` (${detailErrors})` : ''}`);
   }
 };
 
@@ -138,7 +161,8 @@ export const updateEventLink = async (eventId: string, meetLink: string): Promis
 
     console.log(`✅ Event ${eventId} updated with Meet link.`);
   } catch (error: any) {
-    console.error('❌ Error updating event:', error.message);
-    throw new Error(`Failed to update event: ${error.message}`);
+    const apiError = error.response?.data || error;
+    console.error('❌ Error updating event:', apiError);
+    throw new Error(`Failed to update event: ${error.response?.data?.error?.message || error.message}`);
   }
 };
