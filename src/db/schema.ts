@@ -5,6 +5,8 @@ export const userRoleEnum = pgEnum('user_role', ['admin', 'hr', 'candidate', 'in
 export const applicationStatusEnum = pgEnum('application_status', ['pending', 'shortlisted', 'rejected', 'hired']);
 export const interviewStatusEnum = pgEnum('interview_status', ['scheduled', 'completed', 'cancelled']);
 export const interviewTypeEnum = pgEnum('interview_type', ['Online', 'Face to Face', 'Calendly']);
+export const jobStatusEnum = pgEnum('job_status', ['open', 'closed']);
+export const jobCategoryEnum = pgEnum('job_category', ['Engineering', 'Marketing', 'Sales', 'Design', 'Product', 'Other']);
 
 export const jobOpenings = pgTable('job_openings', {
   id: serial('id').primaryKey(),
@@ -13,7 +15,8 @@ export const jobOpenings = pgTable('job_openings', {
   location: varchar('location', { length: 100 }).notNull(),
   experience: varchar('experience', { length: 50 }),
   jobType: varchar('job_type', { length: 50 }),
-  category: varchar('category', { length: 100 }),
+  category: jobCategoryEnum('category').default('Engineering').notNull(),
+  status: jobStatusEnum('status').default('open').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   
   // NEW COLUMNS ADDED BELOW
