@@ -27,30 +27,9 @@ const transporter = nodemailer.createTransport({
 
 export const createApplication = async (req: Request, res: Response) => {
   try {
-
     const body = req.body as ApplicationFormInput;
 
-    // console.log("Request Body:", body);
-    // console.log("Request File:", req.file);
-
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "Resume file is missing." });
-    }
-
-    const existingUser = await db.select().from(users).where(eq(users.email, body.emailAddress)).limit(1);
-
-    if (existingUser.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already exists. Please login and apply."
-      });
-    }
-
-    // if Email Aleady Exists in user then what
-
-    
-
-    // Prevent duplicate applications: same email + same jobId
+    // 1. DUPLICATE CHECK: Has this specific email applied for THIS specific job ID?
     const existingApplication = await db
       .select()
       .from(jobApplications)
@@ -67,7 +46,58 @@ export const createApplication = async (req: Request, res: Response) => {
       });
     }
 
+    // 2. SESSION CHECK: Is there a Bearer token in the headers?
+    const authHeader = req.headers.authorization;
+    let loggedInUser = null;
 
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        loggedInUser = jwt.verify(token, JWT_SECRET) as any;
+      } catch (err) {
+        // Token invalid/expired - proceed as guest logic
+      }
+    }
+
+    // 3. LOGIC FOR LOGGED-IN USERS (SKIP Verification)
+    if (loggedInUser) {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Resume file is missing." });
+      }
+
+      const newAppData: NewApplication = {
+        jobId: Number(body.jobId),
+        fullName: body.fullName,
+        email: body.emailAddress,
+        phoneNumber: body.phoneNumber,
+        resumeUrl: req.file.filename,
+        consentGiven: String(body.consentGiven) === 'true' || body.consentGiven === true,
+      };
+
+      const result = await db.insert(jobApplications).values(newAppData).returning();
+
+      return res.status(201).json({
+        success: true,
+        message: "Application submitted successfully!",
+        data: result[0]
+      });
+    }
+
+    // 4. LOGIC FOR GUESTS (Runs ONLY if NOT logged in)
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Resume file is missing." });
+    }
+
+    // Check if user account exists to force them to login
+    const existingUser = await db.select().from(users).where(eq(users.email, body.emailAddress)).limit(1);
+    if (existingUser.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists. Please login and apply."
+      });
+    }
+
+    // Guest verification flow
     const tokenData: ApplicationTokenPayload = {
       ...body,
       resumeUrl: req.file.filename
@@ -104,13 +134,8 @@ export const createApplication = async (req: Request, res: Response) => {
 export const finalizeApplication = async (req: Request, res: Response) => {
   try {
     const { token, password } = req.body as FinalizeApplicationInput;
-
-
     const decoded = jwt.verify(token, JWT_SECRET) as ApplicationTokenPayload;
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
-
 
     const newAppData: NewApplication = {
       jobId: String(decoded.jobId),
@@ -122,7 +147,7 @@ export const finalizeApplication = async (req: Request, res: Response) => {
     };
 
     const result = await db.transaction(async (tx) => {
-
+      // Create user profile - Note: resumeUrl omitted as it's not in your schema
       await tx.insert(users).values({
         name: decoded.fullName,
         email: decoded.emailAddress,
@@ -131,9 +156,7 @@ export const finalizeApplication = async (req: Request, res: Response) => {
         role: 'candidate',
       });
 
-
       const appEntry = await tx.insert(jobApplications).values(newAppData).returning();
-
       return appEntry[0];
     });
 
