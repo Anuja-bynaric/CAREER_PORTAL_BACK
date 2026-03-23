@@ -34,7 +34,7 @@ export const loginUser = async (req: Request, res: Response) => {
         status: jobApplications.status,
       })
       .from(jobApplications)
-      .leftJoin(jobOpenings, eq(jobApplications.jobId, jobOpenings.id))
+      .leftJoin(jobOpenings, eq(jobApplications.jobId, jobOpenings.jobId))
       .where(eq(jobApplications.email, email));
 
     const appliedIds = userHistory.map(app => app.jobId);
@@ -71,7 +71,7 @@ export const getMe = async (req: Request, res: Response) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-
+    
     // Fetch fresh user data from DB
     const foundUsers = await db.select().from(users).where(eq(users.id, decoded.id)).limit(1);
 
