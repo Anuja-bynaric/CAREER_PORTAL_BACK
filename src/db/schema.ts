@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum, uniqueIndex, bigint } from 'drizzle-orm/pg-core';
 
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'hr', 'candidate', 'interviewer', 'user']);
@@ -67,3 +67,16 @@ export const interviews = pgTable('interviews', {
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const googleTokens = pgTable("google_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiryDate: bigint("expiry_date", { mode: 'string' }),
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+//expiryDate: bigint("expiry_date", { mode: 'string' }),
