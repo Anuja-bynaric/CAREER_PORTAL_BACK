@@ -8,6 +8,7 @@ export const interviewTypeEnum = pgEnum('interview_type', ['Online', 'Face to Fa
 export const jobStatusEnum = pgEnum('job_status', ['open', 'closed']);
 export const jobCategoryEnum = pgEnum('job_category', ['Engineering', 'Marketing', 'Sales', 'Design', 'Product', 'Other']);
 
+
 export const jobOpenings = pgTable('job_openings', {
   id: serial('id').primaryKey(),
   jobId: varchar('job_id', { length: 50 }).unique().notNull(),
@@ -32,6 +33,7 @@ export const jobOpenings = pgTable('job_openings', {
 export const jobApplications = pgTable('job_applications', {
   id: serial('id').primaryKey(),
   jobId: varchar('job_id', { length: 50 }).references(() => jobOpenings.jobId, { onDelete: 'cascade' }),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
   fullName: varchar('full_name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull(),
   phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
@@ -44,7 +46,6 @@ export const jobApplications = pgTable('job_applications', {
   // Unique constraint: one candidate can only apply to each job once
   uniqueApplicationPerJob: uniqueIndex('unique_application_per_job').on(table.email, table.jobId),
 }));
-
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

@@ -67,6 +67,7 @@ export const createApplication = async (req: Request, res: Response) => {
 
       const newAppData: NewApplication = {
         jobId: Number(body.jobId),
+        userId: loggedInUser.id, // Set userId for logged-in users
         fullName: body.fullName,
         email: body.emailAddress,
         phoneNumber: body.phoneNumber,
@@ -137,24 +138,26 @@ export const finalizeApplication = async (req: Request, res: Response) => {
     const decoded = jwt.verify(token, JWT_SECRET) as ApplicationTokenPayload;
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newAppData: NewApplication = {
-      jobId: String(decoded.jobId),
-      fullName: decoded.fullName,
-      email: decoded.emailAddress,
-      phoneNumber: decoded.phoneNumber,
-      resumeUrl: decoded.resumeUrl,
-      consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
-    };
-
     const result = await db.transaction(async (tx) => {
-      // Create user profile - Note: resumeUrl omitted as it's not in your schema
-      await tx.insert(users).values({
+      // Create user profile
+      const newUser = await tx.insert(users).values({
         name: decoded.fullName,
         email: decoded.emailAddress,
         password: hashedPassword,
         phoneNumber: decoded.phoneNumber,
         role: 'candidate',
-      });
+      }).returning();
+
+      // Create job application with userId
+      const newAppData: NewApplication = {
+        jobId: String(decoded.jobId),
+        userId: newUser[0].id, // Set userId for newly created user
+        fullName: decoded.fullName,
+        email: decoded.emailAddress,
+        phoneNumber: decoded.phoneNumber,
+        resumeUrl: decoded.resumeUrl,
+        consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
+      };
 
       const appEntry = await tx.insert(jobApplications).values(newAppData).returning();
       return appEntry[0];
@@ -251,5 +254,36 @@ export const getCandidatesByJobId = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Get Candidates by JobId Error:", error);
     res.status(500).json({ success: false, message: "Failed to fetch candidates for this job." });
+  }
+};
+
+export const getCandidateByJobIdById = async (req: Request, res: Response) => {
+  try {
+    const { jobId, id } = req.params;
+    if (!jobId || !id) {
+      return res.status(400).json({ success: false, message: "jobId and id are required." });
+    }
+    const application = await db
+      .select()
+      .from(jobApplications)
+      .where(and(
+        eq(jobApplications.jobId, jobId),
+        eq(jobApplications.userId, Number(id))
+      ))
+      .limit(1);
+
+    if (application.length === 0) {
+      return res.status(404).json({ success: false, message: "Candidate not found for this job." });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: `Candidate details for job ${jobId} and candidate ${id}`,
+      data: application[0]
+    });
+  } catch (error) {
+    console.error("Get Candidate by JobId and CandidateId Error:", error);
+
+    res.status(500).json({ success: false, message: "Failed to fetch candidate details." });
   }
 };
