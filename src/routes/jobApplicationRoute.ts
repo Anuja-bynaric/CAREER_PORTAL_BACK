@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId } from '../controller/jobApplication';
+import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById } from '../controller/jobApplication';
 import { upload } from '../../config/multer';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 import {setPassword } from "../controller/user.controller";
@@ -43,5 +43,7 @@ router.patch('/:id/status', verifyToken, isHRAdmin, updateApplicationStatus);
 
 // Get candidates by jobId
 router.get('/job/:jobId/candidates', verifyToken, isHRAdmin, getCandidatesByJobId);
+
+router.get('/candidates/:jobId/:id', verifyToken, isHRAdmin, getCandidateByJobIdById);
 
 export default router;
