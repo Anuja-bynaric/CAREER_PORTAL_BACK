@@ -40,6 +40,7 @@ export const jobApplications = pgTable('job_applications', {
   phoneNumber: varchar('phone_number', { length: 20 }).notNull(),
   resumeUrl: text('resume_url').notNull(),
   consentGiven: boolean('consent_given').default(false).notNull(),
+  skills: text('skills').array().default([]).notNull(),
   appliedAt: timestamp('applied_at').defaultNow(),
   status: applicationStatusEnum('status').default('pending').notNull(),
   notes: text('notes'),
