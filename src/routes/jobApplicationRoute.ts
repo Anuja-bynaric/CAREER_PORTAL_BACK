@@ -1,10 +1,12 @@
 import { Router } from "express";
-import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById } from '../controller/jobApplication';
+import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById, getMyApplications } from '../controller/jobApplication';
 import { upload } from '../../config/multer';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
-import {setPassword } from "../controller/user.controller";
+import { setPassword } from "../controller/user.controller";
 
 const router = Router();
+
+router.get('/my-applications', getMyApplications);
 
 // Endpoint: POST /user/applyJob
 //router.post('/applyJob', createApplication);
@@ -19,14 +21,14 @@ router.post('/applyJob', (req, res, next) => {
         if (err) {
             if (err.code === 'LIMIT_UNEXPECTED_FILE') {
                 console.error("Multer Unexpected Field Error. Field:", err.field);
-                return res.status(400).json({ 
-                    success: false, 
-                    message: `Unexpected field: ${err.field}. Expected 'resume'.` 
+                return res.status(400).json({
+                    success: false,
+                    message: `Unexpected field: ${err.field}. Expected 'resume'.`
                 });
             }
-            return res.status(400).json({ 
-                success: false, 
-                message: err.message || "File upload error" 
+            return res.status(400).json({
+                success: false,
+                message: err.message || "File upload error"
             });
         }
         next();
