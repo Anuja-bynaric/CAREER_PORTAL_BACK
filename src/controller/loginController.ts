@@ -25,7 +25,22 @@ export const loginUser = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Invalid email or password." });
     }
 
-    // 3. FETCH REAL APPLICATION HISTORY
+    // 3. Generate JWT Token
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' } // Token expires in 7 days
+    );
+
+    // 4. Set token in HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // 5. FETCH REAL APPLICATION HISTORY
     const userHistory = await db
       .select({
         jobId: jobApplications.jobId,
@@ -39,10 +54,9 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const appliedIds = userHistory.map(app => app.jobId);
 
-    // 4. Return data WITHOUT generating a new token
+    // 6. Return data with token set in cookie
     res.status(200).json({
       success: true,
-      // Removed jwt.sign logic here
       user: {
         name: user.name,
         email: user.email,
