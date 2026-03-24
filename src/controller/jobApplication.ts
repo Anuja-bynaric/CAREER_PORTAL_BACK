@@ -223,6 +223,7 @@ export const getCandidatesByJobId = async (req: Request, res: Response) => {
     const applications = await db
       .select({
         id: jobApplications.id,
+        userId: jobApplications.userId,
         fullName: jobApplications.fullName,
         email: jobApplications.email,
         phoneNumber: jobApplications.phoneNumber,
