@@ -25,6 +25,31 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const parseSkills = (skills: any): string[] => {
+  if (!skills) return [];
+
+  if (Array.isArray(skills)) {
+    return skills.map(String);
+  }
+
+  if (typeof skills === 'string') {
+    try {
+      const parsed = JSON.parse(skills);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String);
+      }
+    } catch (err) {
+      // Non-JSON string like 'JavaScript,React'
+      return skills
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
 export const createApplication = async (req: Request, res: Response) => {
   try {
     const body = req.body as ApplicationFormInput;
@@ -73,6 +98,7 @@ export const createApplication = async (req: Request, res: Response) => {
         phoneNumber: body.phoneNumber,
         resumeUrl: req.file.filename,
         consentGiven: String(body.consentGiven) === 'true' || body.consentGiven === true,
+        skills: parseSkills(body.skills),
       };
 
       const result = await db.insert(jobApplications).values(newAppData).returning();
@@ -157,6 +183,7 @@ export const finalizeApplication = async (req: Request, res: Response) => {
         phoneNumber: decoded.phoneNumber,
         resumeUrl: decoded.resumeUrl,
         consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
+        skills: parseSkills(decoded.skills),
       };
 
       const appEntry = await tx.insert(jobApplications).values(newAppData).returning();

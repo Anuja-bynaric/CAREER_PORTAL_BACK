@@ -9,7 +9,8 @@ export interface ApplicationFormInput {
   emailAddress: string;
   phoneNumber: string;
   jobId: string; 
-  consentGiven: string | boolean; 
+  consentGiven: string | boolean;
+  skills?: string[]; // optional skill array from frontend
 }
 
 // Data preserved in the email link (JWT)
