@@ -56,7 +56,7 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       durationMinutes = 30,
       notes,
       candidateEmail,
-      interviewerEmail,
+      interviewerEmails, // Changed from interviewerEmail to interviewerEmails (array)
       googleUserId = 1,
       interviewType = 'Online',
       location,
@@ -66,6 +66,14 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields: jobApplicationId, interviewerId, scheduledAt',
+      });
+    }
+
+    // Validate interviewerEmails is an array
+    if (!Array.isArray(interviewerEmails) || interviewerEmails.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'interviewerEmails must be a non-empty array',
       });
     }
 
@@ -81,12 +89,15 @@ export const scheduleInterview = async (req: Request, res: Response) => {
 
     const scheduledDate = parseIST(scheduledAt);
 
+    // Include candidate email and all interviewer emails in attendees
+    const attendees = [candidateEmail, ...interviewerEmails];
+
     const event = await createGoogleEvent(
       {
         title: 'Interview',
         scheduledAt: scheduledDate,
         durationMinutes,
-        attendees: [candidateEmail, interviewerEmail],
+        attendees: attendees,
         description: notes,
       },
       Number(googleUserId)
@@ -129,7 +140,7 @@ export const scheduleInterview = async (req: Request, res: Response) => {
 export const rescheduleInterview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { scheduledAt, durationMinutes = 30, notes, googleUserId = 1 } = req.body;
+    const { scheduledAt, durationMinutes = 30, notes, googleUserId = 1, interviewerEmails } = req.body;
 
     if (!scheduledAt) {
       return res.status(400).json({ success: false, message: 'scheduledAt is required to reschedule.' });
@@ -153,14 +164,26 @@ export const rescheduleInterview = async (req: Request, res: Response) => {
       .where(eq(jobApplications.id, interviewData.jobApplicationId))
       .limit(1);
 
-    const interviewer = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, interviewData.interviewerId))
-      .limit(1);
-
     const candidateEmail = jobApplication?.[0]?.email;
-    const interviewerEmail = interviewer?.[0]?.email;
+
+    // Use provided interviewerEmails or fall back to the single interviewer from DB
+    let attendees: string[] = [candidateEmail];
+    
+    if (Array.isArray(interviewerEmails) && interviewerEmails.length > 0) {
+      attendees = attendees.concat(interviewerEmails);
+    } else {
+      // Fallback to single interviewer from database
+      const interviewer = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, interviewData.interviewerId))
+        .limit(1);
+      
+      const interviewerEmail = interviewer?.[0]?.email;
+      if (interviewerEmail) {
+        attendees.push(interviewerEmail);
+      }
+    }
 
     const scheduledDate = parseIST(scheduledAt);
 
@@ -169,7 +192,7 @@ export const rescheduleInterview = async (req: Request, res: Response) => {
         title: 'Interview (Rescheduled)',
         scheduledAt: scheduledDate,
         durationMinutes,
-        attendees: [candidateEmail, interviewerEmail].filter(Boolean),
+        attendees: attendees.filter(Boolean),
         description: notes || interviewData.notes || 'Interview rescheduled',
       },
       Number(googleUserId)
@@ -285,7 +308,7 @@ export const getInterviewsByApplication = async (req: Request, res: Response) =>
 export const cancelInterview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { cancellationReason } = req.body;
+    const { cancellationReason, interviewerEmails } = req.body;
 
     const interview = await db
       .select()
@@ -305,12 +328,6 @@ export const cancelInterview = async (req: Request, res: Response) => {
       .where(eq(jobApplications.id, interviewData.jobApplicationId))
       .limit(1);
 
-    const interviewer = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, interviewData.interviewerId))
-      .limit(1);
-
     const updatedInterview = await db
       .update(interviews)
       .set({
@@ -324,14 +341,32 @@ export const cancelInterview = async (req: Request, res: Response) => {
     let cancellationEvent = null;
     try {
       const candidateEmail = jobApplication?.[0]?.email;
-      const interviewerEmail = interviewer?.[0]?.email;
+      
+      // Use provided interviewerEmails or fall back to the single interviewer from DB
+      let attendees: string[] = [candidateEmail];
+      
+      if (Array.isArray(interviewerEmails) && interviewerEmails.length > 0) {
+        attendees = attendees.concat(interviewerEmails);
+      } else {
+        // Fallback to single interviewer from database
+        const interviewer = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, interviewData.interviewerId))
+          .limit(1);
+        
+        const interviewerEmail = interviewer?.[0]?.email;
+        if (interviewerEmail) {
+          attendees.push(interviewerEmail);
+        }
+      }
 
       cancellationEvent = await createGoogleEvent(
         {
           title: 'Interview Cancelled',
           scheduledAt: interviewData.scheduledAt,
           durationMinutes: 30, // Use default duration for cancelled event
-          attendees: [candidateEmail, interviewerEmail].filter(Boolean),
+          attendees: attendees.filter(Boolean),
           description: `Interview has been cancelled. ${cancellationReason ? `Reason: ${cancellationReason}` : ''}`,
         },
         1 // Default googleUserId, you might want to make this configurable
@@ -341,10 +376,9 @@ export const cancelInterview = async (req: Request, res: Response) => {
       // Continue with email sending even if calendar event fails
     }
 
-    // Send cancellation email to candidate and interviewer
+    // Send cancellation email to candidate and interviewers
     try {
       const candidateEmail = jobApplication?.[0]?.email;
-      const interviewerEmail = interviewer?.[0]?.email;
       const subject = 'Interview Cancelled';
       const body = `Hi,<br/><br/>Your interview scheduled for <strong>${formatDate(new Date(interviewData.scheduledAt))} at ${formatTime(new Date(interviewData.scheduledAt))}</strong> has been cancelled.<br/>${cancellationReason ? `<br/><strong>Reason:</strong> ${cancellationReason}<br/>` : ''}<br/>Thanks,<br/>HR Team`;
 
@@ -357,7 +391,25 @@ export const cancelInterview = async (req: Request, res: Response) => {
         });
       }
 
-      if (interviewerEmail) {
+      // Send to all interviewers
+      let interviewersToEmail: string[] = [];
+      
+      if (Array.isArray(interviewerEmails) && interviewerEmails.length > 0) {
+        interviewersToEmail = interviewerEmails;
+      } else {
+        // Fallback to single interviewer from database
+        const interviewer = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, interviewData.interviewerId))
+          .limit(1);
+        
+        if (interviewer?.[0]?.email) {
+          interviewersToEmail = [interviewer[0].email];
+        }
+      }
+
+      for (const interviewerEmail of interviewersToEmail) {
         await transporter.sendMail({
           from: `"Bynaric Careers" <${process.env.EMAIL_USER}>`,
           to: interviewerEmail,
