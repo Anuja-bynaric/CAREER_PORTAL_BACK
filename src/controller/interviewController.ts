@@ -59,6 +59,7 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       interviewerEmails, // Changed from interviewerEmail to interviewerEmails (array)
       googleUserId = 1,
       interviewType = 'Online',
+      interviewMode = 'Round-I', // New field with default
       location,
     } = req.body;
 
@@ -87,6 +88,17 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Job application not found.' });
     }
 
+    // Get interviewer name
+    const interviewer = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, Number(interviewerId)))
+      .limit(1);
+
+    if (!interviewer || interviewer.length === 0) {
+      return res.status(404).json({ success: false, message: 'Interviewer not found.' });
+    }
+
     const scheduledDate = parseIST(scheduledAt);
 
     // Include candidate email and all interviewer emails in attendees
@@ -107,9 +119,12 @@ export const scheduleInterview = async (req: Request, res: Response) => {
       .insert(interviews)
       .values({
         jobApplicationId: Number(jobApplicationId),
+        jobApplicantName: jobApplication[0].fullName,
         interviewerId: Number(interviewerId),
+        interviewerName: interviewer[0].name,
         scheduledAt: scheduledDate,
         interviewType,
+        interviewMode,
         location,
         meetingLink: event.meetingLink,
         status: 'scheduled',
@@ -140,7 +155,7 @@ export const scheduleInterview = async (req: Request, res: Response) => {
 export const rescheduleInterview = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { scheduledAt, durationMinutes = 30, notes, googleUserId = 1, interviewerEmails } = req.body;
+    const { scheduledAt, durationMinutes = 30, notes, googleUserId = 1, interviewerEmails, interviewMode } = req.body;
 
     if (!scheduledAt) {
       return res.status(400).json({ success: false, message: 'scheduledAt is required to reschedule.' });
@@ -202,6 +217,7 @@ export const rescheduleInterview = async (req: Request, res: Response) => {
       .update(interviews)
       .set({
         scheduledAt: scheduledDate,
+        ...(interviewMode && { interviewMode }),
         notes: notes ? `${interviewData.notes || ''}\nRESCHEDULED: ${notes}` : interviewData.notes,
         status: 'scheduled',
         meetingLink: event.meetingLink,
@@ -227,15 +243,20 @@ export const rescheduleInterview = async (req: Request, res: Response) => {
 export const updateInterviewStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, interviewMode } = req.body;
 
     if (!['scheduled', 'completed', 'cancelled'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value.' });
     }
 
+    const updateData: any = { status, notes: remarks };
+    if (interviewMode) {
+      updateData.interviewMode = interviewMode;
+    }
+
     const updatedInterview = await db
       .update(interviews)
-      .set({ status, notes: remarks })
+      .set(updateData)
       .where(eq(interviews.id, Number(id)))
       .returning();
 
