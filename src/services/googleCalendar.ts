@@ -67,6 +67,9 @@ export const createGoogleEvent = async (data: any, userId: number) => {
       timeZone: "Asia/Kolkata",
     },
     attendees: data.attendees.map((email: string) => ({ email })),
+    guestsCanModify: false,
+    guestsCanInviteOthers: false,
+    guestsCanSeeOtherGuests: false, // Hide other attendees from each invitee
     conferenceData: {
       createRequest: {
         requestId: "meet-" + Date.now(),
