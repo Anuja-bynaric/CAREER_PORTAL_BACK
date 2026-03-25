@@ -8,6 +8,7 @@ import loginRoute from './src/routes/loginRoute'
 import jobRoute from './src/routes/jobRoute'
 import interviewRoute from './src/routes/interviewRoute';
 import interviewerRoute from './src/routes/interviewerRoute';
+import resumeRoute from './src/routes/resumeRoute';
 import googleAuthRoutes from "./src/routes/googleAuth";
 import { scheduleInterview } from './src/controller/interviewController';
 // import calendarRoute from './src/routes/calendarRoute';
@@ -33,6 +34,7 @@ app.use('/admin', jobApplicationRoute);
 app.use('/admin', jobRoute)
 app.use('/admin/interviews', interviewRoute);
 app.use('/admin/interviewers', interviewerRoute);
+app.use('/admin/resumes', resumeRoute);
 
 app.use("/auth", googleAuthRoutes);
 
