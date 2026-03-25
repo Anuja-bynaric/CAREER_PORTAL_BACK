@@ -3,10 +3,19 @@ export interface LoginInput {
   password?: string; // Optional depending on your auth strategy
 }
 
+export interface UserApplication {
+  jobTitle: string;
+  appliedDate: string;
+  status: string;
+}
+
 export interface UserResponse {
-  id: number;
   name: string;
   email: string;
-  phone: string;
+  phoneNumber: string; // Matches frontend 'formData.phoneNumber'
+  skills: any;         // Matches frontend 'skills'
   savedResumeName: string | null;
+  appliedJobIds: string[];
+  applications: UserApplication[];
+  role?: string;
 }

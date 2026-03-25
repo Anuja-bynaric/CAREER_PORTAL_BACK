@@ -47,10 +47,15 @@ export const loginUser = async (req: Request, res: Response) => {
         jobTitle: jobOpenings.title,
         appliedDate: jobApplications.appliedAt,
         status: jobApplications.status,
+        phoneNumber: jobApplications.phoneNumber,
+        skills: jobApplications.skills,
+        resumeUrl: jobApplications.resumeUrl
       })
       .from(jobApplications)
       .leftJoin(jobOpenings, eq(jobApplications.jobId, jobOpenings.jobId))
       .where(eq(jobApplications.email, email));
+
+    const lastApp = userHistory.length > 0 ? userHistory[userHistory.length - 1] : null;
 
     const appliedIds = userHistory.map(app => app.jobId);
 
@@ -61,11 +66,16 @@ export const loginUser = async (req: Request, res: Response) => {
       user: {
         name: user.name,
         email: user.email,
-        appliedJobIds: appliedIds,
+        role: user.role || 'user',
+        // We pull these from 'lastApp' (the history), NOT the 'user' object
+        phoneNumber: lastApp?.phoneNumber || '',
+        skills: lastApp?.skills || [],
+        savedResumeName: lastApp?.resumeUrl || null,
+        appliedJobIds: userHistory.map(app => app.jobId).filter((id): id is string => !!id),
         applications: userHistory.map(app => ({
           jobTitle: app.jobTitle || "Unknown Position",
           appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : 'N/A',
-          status: app.status
+          status: app.status || 'pending'
         }))
       }
     });
@@ -96,12 +106,17 @@ export const getMe = async (req: Request, res: Response) => {
 
     const user = foundUsers[0];
 
+    const lastApp = await db.select().from(jobApplications).where(eq(jobApplications.email, user.email)).limit(1);
+
     res.status(200).json({
       success: true,
       user: {
         name: user.name,
         email: user.email,
         role: user.role,
+        phoneNumber: lastApp[0]?.phoneNumber || '',
+        skills: lastApp[0]?.skills || [],
+        savedResumeName: lastApp[0]?.resumeUrl || null
       }
     });
   } catch (error) {

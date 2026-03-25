@@ -25,6 +25,31 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const parseSkills = (skills: any): string[] => {
+  if (!skills) return [];
+
+  if (Array.isArray(skills)) {
+    return skills.map(String);
+  }
+
+  if (typeof skills === 'string') {
+    try {
+      const parsed = JSON.parse(skills);
+      if (Array.isArray(parsed)) {
+        return parsed.map(String);
+      }
+    } catch (err) {
+      // Non-JSON string like 'JavaScript,React'
+      return skills
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
 export const createApplication = async (req: Request, res: Response) => {
   try {
     const body = req.body as ApplicationFormInput;
@@ -68,17 +93,21 @@ export const createApplication = async (req: Request, res: Response) => {
     }
 
     // 4. VALIDATION
-    if (!req.file) {
+    if (!req.file && !body.savedResumeName) {
       return res.status(400).json({ success: false, message: "Resume file is missing." });
     }
 
+    const finalResumeUrl = req.file ? req.file.filename : body.savedResumeName;
+
     const newAppData: NewApplication = {
       jobId: String(body.jobId),
+      userId: loggedInUser ? loggedInUser.id : null,
       fullName: body.fullName,
       email: body.emailAddress,
       phoneNumber: body.phoneNumber,
-      resumeUrl: req.file.filename,
+      resumeUrl: finalResumeUrl as string,
       consentGiven: String(body.consentGiven) === 'true' || body.consentGiven === true,
+      skills: parseSkills(req.body.skills),
     };
 
     // 5. BRANCHING LOGIC
@@ -91,6 +120,10 @@ export const createApplication = async (req: Request, res: Response) => {
         data: result[0]
       });
     } else {
+
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Please upload a resume." });
+      }
       // NEW GUEST FLOW (Only runs if email doesn't exist in 'users' table)
       const tokenData: ApplicationTokenPayload = { ...body, resumeUrl: req.file.filename };
       const token = jwt.sign(tokenData, JWT_SECRET, { expiresIn: '1h' });
@@ -141,6 +174,7 @@ export const finalizeApplication = async (req: Request, res: Response) => {
         phoneNumber: decoded.phoneNumber,
         resumeUrl: decoded.resumeUrl,
         consentGiven: decoded.consentGiven === 'true' || decoded.consentGiven === true,
+        skills: parseSkills(decoded.skills),
       };
 
       const appEntry = await tx.insert(jobApplications).values(newAppData).returning();
