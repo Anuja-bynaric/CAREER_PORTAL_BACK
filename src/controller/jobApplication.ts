@@ -259,7 +259,8 @@ export const getCandidatesByJobId = async (req: Request, res: Response) => {
         appliedAt: jobApplications.appliedAt,
         status: jobApplications.status,
         notes: jobApplications.notes,
-        jobId: jobApplications.jobId
+        jobId: jobApplications.jobId,
+        skills: jobApplications.skills,
       })
       .from(jobApplications)
       .where(eq(jobApplications.jobId, jobId)) 
