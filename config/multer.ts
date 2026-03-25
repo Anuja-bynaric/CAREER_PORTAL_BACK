@@ -38,3 +38,32 @@ export const upload = multer({
     fileFilter: fileFilter,
    
 });
+
+// For bulk zip upload
+const zipStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const tempDir = 'uploads/temp';
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        cb(null, tempDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const zipFileFilter = (req: any, file: Express.Multer.File, cb: any) => {
+    if (file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed') {
+        cb(null, true);
+    } else {
+        cb(new Error('Only ZIP files are allowed for bulk upload!'), false);
+    }
+};
+
+export const uploadZip = multer({
+    storage: zipStorage,
+    fileFilter: zipFileFilter,
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});

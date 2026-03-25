@@ -89,3 +89,18 @@ export const googleTokens = pgTable("google_tokens", {
 });
 
 //expiryDate: bigint("expiry_date", { mode: 'string' }),
+
+export const resumeStatusEnum = pgEnum('resume_status', ['uploaded', 'processing', 'processed', 'failed']);
+
+export const resumes = pgTable('resumes', {
+  id: serial('id').primaryKey(),
+  resumeUniqueId: varchar('resume_unique_id', { length: 100 }).unique().notNull(),
+  resumeUrl: text('resume_url').notNull(),
+  extractedSkills: text('extracted_skills').array().default([]).notNull(),
+  uploadedBy: integer('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+  uploadDate: timestamp('upload_date').defaultNow(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileSize: bigint('file_size', { mode: 'number' }),
+  status: resumeStatusEnum('status').default('uploaded').notNull(),
+  processingError: text('processing_error'),
+});
