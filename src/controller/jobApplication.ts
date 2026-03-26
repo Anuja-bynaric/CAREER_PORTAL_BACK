@@ -297,7 +297,7 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
       .from(jobApplications)
       .where(and(
         eq(jobApplications.jobId, jobId),
-        eq(jobApplications.userId, Number(id))
+        eq(jobApplications.id, Number(id))
       ))
       .limit(1);
 
