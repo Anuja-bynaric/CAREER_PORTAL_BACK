@@ -420,7 +420,6 @@ export const uploadBulkResumes = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// ... getResumes and getResumeById remain the same (they don't affect the insertion)
 // ... getResumes and getResumeById remain the same
 export const getResumes = async (req: Request, res: Response) => {
   try {

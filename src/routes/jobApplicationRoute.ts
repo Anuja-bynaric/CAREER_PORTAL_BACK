@@ -1,11 +1,13 @@
 import { Router } from "express";
-import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById } from '../controller/jobApplication';
+import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById, getMyApplications } from '../controller/jobApplication';
 import { upload } from '../../config/multer';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 import {setPassword } from "../controller/user.controller";
 
 const router = Router();
 
+
+router.get('/my-applications', getMyApplications);
 // Endpoint: POST /user/applyJob
 //router.post('/applyJob', createApplication);
 // router.post('/apply', applyJob);

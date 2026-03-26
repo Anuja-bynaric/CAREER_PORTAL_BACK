@@ -54,7 +54,17 @@ export const createApplication = async (req: Request, res: Response) => {
   try {
     const body = req.body as ApplicationFormInput;
 
-    // 1. DUPLICATE CHECK: Has this specific email applied for THIS specific job ID?
+    // 1. Identify if a user is logged in
+    const authHeader = req.headers.authorization;
+    let loggedInUser: any = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        loggedInUser = jwt.verify(token, JWT_SECRET);
+      } catch (err) { /* invalid token */ }
+    }
+
+    // 2. DUPLICATE CHECK: Has this email applied for THIS job already?
     const existingApplication = await db
       .select()
       .from(jobApplications)
@@ -71,86 +81,67 @@ export const createApplication = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. SESSION CHECK: Is there a Bearer token in the headers?
-    const authHeader = req.headers.authorization;
-    let loggedInUser = null;
+    // 3. ACCOUNT CHECK: CRITICAL FIX - MOVE THIS ABOVE EVERYTHING ELSE
+    const existingUser = await db.select().from(users).where(eq(users.email, body.emailAddress)).limit(1);
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split(' ')[1];
-        loggedInUser = jwt.verify(token, JWT_SECRET) as any;
-      } catch (err) {
-        // Token invalid/expired - proceed as guest logic
-      }
+    // If account exists BUT the user is NOT logged in (no token), stop them here!
+    if (existingUser.length > 0 && !loggedInUser) {
+      return res.status(403).json({
+        success: false,
+        message: "This email is already registered. Please login to your account to apply."
+      });
     }
 
-    // 3. LOGIC FOR LOGGED-IN USERS (SKIP Verification)
+    // 4. VALIDATION
+    if (!req.file && !body.savedResumeName) {
+      return res.status(400).json({ success: false, message: "Resume file is missing." });
+    }
+
+    const finalResumeUrl = req.file ? req.file.filename : body.savedResumeName;
+
+    const newAppData: NewApplication = {
+      jobId: String(body.jobId),
+      userId: loggedInUser ? loggedInUser.id : null,
+      fullName: body.fullName,
+      email: body.emailAddress,
+      phoneNumber: body.phoneNumber,
+      resumeUrl: finalResumeUrl as string,
+      consentGiven: String(body.consentGiven) === 'true' || body.consentGiven === true,
+      skills: parseSkills(req.body.skills),
+    };
+
+    // 5. BRANCHING LOGIC
     if (loggedInUser) {
-      if (!req.file) {
-        return res.status(400).json({ success: false, message: "Resume file is missing." });
-      }
-
-      const newAppData: NewApplication = {
-        jobId: Number(body.jobId),
-        userId: loggedInUser.id, // Set userId for logged-in users
-        fullName: body.fullName,
-        email: body.emailAddress,
-        phoneNumber: body.phoneNumber,
-        resumeUrl: req.file.filename,
-        consentGiven: String(body.consentGiven) === 'true' || body.consentGiven === true,
-        skills: parseSkills(body.skills),
-      };
-
+      // LOGGED IN FLOW
       const result = await db.insert(jobApplications).values(newAppData).returning();
-
       return res.status(201).json({
         success: true,
         message: "Application submitted successfully!",
         data: result[0]
       });
-    }
+    } else {
 
-    // 4. LOGIC FOR GUESTS (Runs ONLY if NOT logged in)
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "Resume file is missing." });
-    }
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Please upload a resume." });
+      }
+      // NEW GUEST FLOW (Only runs if email doesn't exist in 'users' table)
+      const tokenData: ApplicationTokenPayload = { ...body, resumeUrl: req.file.filename };
+      const token = jwt.sign(tokenData, JWT_SECRET, { expiresIn: '1h' });
+      const setupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/set-password?token=${token}`;
 
-    // Check if user account exists to force them to login
-    const existingUser = await db.select().from(users).where(eq(users.email, body.emailAddress)).limit(1);
-    if (existingUser.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already exists. Please login and apply."
+      await transporter.sendMail({
+        from: `"Bynaric Careers" <${process.env.EMAIL_USER}>`,
+        to: body.emailAddress,
+        subject: 'Complete your application - Set Password',
+        html: `<p>Please <a href="${setupLink}">click here</a> to set your password.</p>`
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Verification email sent!",
+        token: token
       });
     }
-
-    // Guest verification flow
-    const tokenData: ApplicationTokenPayload = {
-      ...body,
-      resumeUrl: req.file.filename
-    };
-
-    const token = jwt.sign(tokenData, JWT_SECRET, { expiresIn: '1h' });
-    const setupLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/set-password?token=${token}`;
-
-    await transporter.sendMail({
-      from: `"Bynaric Careers" <${process.env.EMAIL_USER}>`,
-      to: body.emailAddress,
-      subject: 'Complete your application - Set Password',
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
-          <h2>Hello ${body.fullName},</h2>
-          <p>Thank you for applying. To complete your application, please set your account password:</p>
-          <a href="${setupLink}" style="background: #e11d48; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Click here to set your password</a>
-        </div>
-      `
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Verification email sent!",
-      token: token
-    });
 
   } catch (error: any) {
     console.error("Application Error:", error);
@@ -315,4 +306,7 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
 
     res.status(500).json({ success: false, message: "Failed to fetch candidate details." });
   }
+};
+
+export const getMyApplications = async (req: Request, res: Response) => {
 };
