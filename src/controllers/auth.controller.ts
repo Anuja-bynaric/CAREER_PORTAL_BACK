@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { db } from '../db';
+import { db } from '../config/db';
 import { users, jobApplications, jobOpenings } from '../db/schema'; // Import the correct tables
 import { eq, and } from 'drizzle-orm';
 

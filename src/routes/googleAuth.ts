@@ -1,6 +1,6 @@
 import express from "express";
-import oauth2Client from "../../config/google";
-import { db } from "../db";
+import oauth2Client from "../config/google";
+import { db } from "../config/db";
 import { googleTokens } from "../db/schema";
 import { eq } from "drizzle-orm";
 

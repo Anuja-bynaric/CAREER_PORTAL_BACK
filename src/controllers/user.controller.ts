@@ -1,6 +1,6 @@
 import { eq, or, and } from 'drizzle-orm';
 import { jobApplications, users } from '../db/schema';
-import { db } from '../db';
+import { db } from '../config/db';
 import { Request, Response } from 'express';
 import { transporter } from '../utils/mailer';
 import bcrypt from 'bcrypt';

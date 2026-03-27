@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { db } from '../db';
+import { db } from '../config/db';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 

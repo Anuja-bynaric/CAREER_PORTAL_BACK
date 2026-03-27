@@ -1,5 +1,5 @@
 import express from 'express';
-import { createInterviewer, getAllInterviewers, updateInterviewer, deleteInterviewer } from '../controller/user.controller';
+import { createInterviewer, getAllInterviewers, updateInterviewer, deleteInterviewer } from '../controllers/user.controller';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 
 const router = express.Router();

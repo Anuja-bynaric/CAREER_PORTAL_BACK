@@ -1,5 +1,5 @@
 import express from 'express';
-import { scheduleInterview, updateInterviewStatus, rescheduleInterview, getInterviews, getInterviewById, getInterviewsByApplication, cancelInterview } from '../controller/interviewController';
+import { scheduleInterview, updateInterviewStatus, rescheduleInterview, getInterviews, getInterviewById, getInterviewsByApplication, cancelInterview } from '../controllers/interview.controller';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 
 const router = express.Router();
