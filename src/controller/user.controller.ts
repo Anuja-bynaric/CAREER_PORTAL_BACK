@@ -129,7 +129,11 @@ export const createAdminOrHR = async (req: Request, res: Response) => {
 
 export const createInterviewer = async (req: Request, res: Response) => {
     try {
-        const { name, email, password, phoneNumber } = req.body;
+        
+        // if role candidate then get skills from jobapplication table by refrencing
+
+    
+        const { name, email, password, phoneNumber, skills } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({ message: "Name, email, and password are required." });
@@ -148,12 +152,13 @@ export const createInterviewer = async (req: Request, res: Response) => {
             password: hashedPassword,
             phoneNumber: phoneNumber || null,
             role: 'interviewer',
-            isVerified: true
+            isVerified: true,
+            skills: skills || []
         }).returning();
 
         return res.status(201).json({
             message: "Interviewer account created successfully.",
-            user: { id: newUser[0].id, name: newUser[0].name, email: newUser[0].email, phoneNumber: newUser[0].phoneNumber, role: newUser[0].role }
+            user: { id: newUser[0].id, name: newUser[0].name, email: newUser[0].email, phoneNumber: newUser[0].phoneNumber, role: newUser[0].role, skills: newUser[0].skills }
         });
 
     } catch (error) {

@@ -43,6 +43,10 @@ export const jobApplications = pgTable('job_applications', {
   skills: text('skills').array().default([]).notNull(),
   appliedAt: timestamp('applied_at').defaultNow(),
   status: applicationStatusEnum('status').default('pending').notNull(),
+  resumeId: integer('resume_id').references(() => resumes.id, { onDelete: 'cascade' }),
+  matchScore: integer('match_score'),
+  experience: integer('experience'),
+  summary: text('summary'),
   notes: text('notes'),
 }, (table) => ({
   // Unique constraint: one candidate can only apply to each job once
@@ -59,6 +63,7 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').default('candidate').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+  skills: text('skills').array().default([]).notNull() // For candidates, store skills as an array of strings
 });
 
 export const interviews = pgTable('interviews', {
@@ -83,7 +88,7 @@ export const googleTokens = pgTable("google_tokens", {
 
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
-  expiryDate: bigint("expiry_date", { mode: 'string' }),
+  expiryDate: bigint("expiry_date", { mode: 'number' }),
 
   createdAt: timestamp("created_at").defaultNow(),
 });
