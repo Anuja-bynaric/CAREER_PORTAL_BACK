@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { db } from '../db';
+import { db } from '../config/db';
 import { interviews, jobApplications, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { createGoogleEvent } from "../services/googleCalendar";

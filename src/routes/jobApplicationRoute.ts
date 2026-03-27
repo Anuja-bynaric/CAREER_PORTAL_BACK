@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById, getMyApplications } from '../controller/jobApplication';
-import { upload } from '../../config/multer';
+import { createApplication, downloadResume, finalizeApplication, updateApplicationStatus, getCandidatesByJobId, getCandidateByJobIdById, getMyApplications } from '../controllers/jobApplication.controller';
+import { upload } from '../config/multer';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
-import {setPassword } from "../controller/user.controller";
+import {setPassword } from "../controllers/user.controller";
 
 const router = Router();
 

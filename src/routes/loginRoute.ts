@@ -1,8 +1,8 @@
 import express from 'express';
-import { loginUser, getMe, logoutUser } from '../controller/loginController';
+import { loginUser, getMe, logoutUser } from '../controllers/auth.controller';
 
-import { finalizeApplication } from '../controller/jobApplication';
-import { createAdminOrHR } from '../controller/user.controller';
+import { finalizeApplication } from '../controllers/jobApplication.controller';
+import { createAdminOrHR } from '../controllers/user.controller';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 
 

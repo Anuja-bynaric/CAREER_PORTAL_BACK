@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { uploadBulkResumes, getResumes, getResumeById } from '../controller/resumeController';
-import { uploadZip } from '../../config/multer';
+import { uploadBulkResumes, getResumes, getResumeById } from '../controllers/resume.controller';
+import { uploadZip } from '../config/multer';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 
 const router = Router();

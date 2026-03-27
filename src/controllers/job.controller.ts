@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { db } from '../db'; // Your db connection
+import { db } from '../config/db'; // Your db connection
 import { jobOpenings } from '../db/schema';
 import { desc } from 'drizzle-orm';
 import { ilike, and, or, eq } from 'drizzle-orm';
 
 export const createJob = async (req: Request, res: Response) => {
   try {
-    const { title, location, experience, jobType, category, description, requirements, responsibilities, about } = req.body;
+    const { title, location, minExp, maxExp, jobType, category, description, requirements, responsibilities, about } = req.body;
 
     if (!title || !location) {
       return res.status(400).json({ success: false, message: "Title and location are required." });
@@ -16,7 +16,8 @@ export const createJob = async (req: Request, res: Response) => {
       title,
       jobId: `job_${Date.now()}`, // Generate a unique job ID
       location,
-      experience,
+      minExp: 0,
+      maxExp,
       jobType,
       category,
       description,

@@ -1,5 +1,5 @@
 // import { Request, Response } from 'express';
-// import { db } from '../db';
+// import { db } from '../config/db';
 // import { resumes } from '../db/schema';
 // import { eq } from 'drizzle-orm';
 // import AdmZip from 'adm-zip';
@@ -254,7 +254,7 @@
 //   }
 // };
 import { Request, Response } from 'express';
-import { db } from '../db';
+import { db } from '../config/db';
 import { resumes, jobOpenings, jobApplications } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import AdmZip from 'adm-zip';

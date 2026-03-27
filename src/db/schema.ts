@@ -15,19 +15,20 @@ export const jobOpenings = pgTable('job_openings', {
   jobId: varchar('job_id', { length: 50 }).unique().notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   location: varchar('location', { length: 100 }).notNull(),
-  experience: varchar('experience', { length: 50 }),
+  minExp: integer('min_exp').default(0).notNull(),
+  maxExp: integer('max_exp'),
   jobType: varchar('job_type', { length: 50 }),
   category: jobCategoryEnum('category').default('Engineering').notNull(),
   status: jobStatusEnum('status').default('open').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
-  
+
   // NEW COLUMNS ADDED BELOW
   description: text('description'),
-  
+
   // Use .array() for PostgreSQL text arrays
-  requirements: text('requirements').array(), 
+  requirements: text('requirements').array(),
   responsibilities: text('responsibilities').array(),
-  
+
   about: text('about'),
 });
 

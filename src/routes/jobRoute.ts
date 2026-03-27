@@ -1,8 +1,8 @@
 import express from 'express';
-import { getAllJobs,searchJobs, createJob, updateJob, deleteJob, getJobById } from '../controller/jobController';
+import { getAllJobs,searchJobs, createJob, updateJob, deleteJob, getJobById } from '../controllers/job.controller';
 import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
-import { getAllCandidates  } from '../controller/user.controller';
-import { changeJobStatus } from '../controller/jobController';
+import { getAllCandidates  } from '../controllers/user.controller';
+import { changeJobStatus } from '../controllers/job.controller';
 
 const router = express.Router();
 
