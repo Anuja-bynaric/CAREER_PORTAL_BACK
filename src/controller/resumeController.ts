@@ -82,12 +82,12 @@
 // const extractSkillsLocal = async (text: string): Promise<string[]> => {
 //   try {
 //     const lowerText = text.toLowerCase();
-    
+
 //     // Safely match strict word boundaries for skills to prevent partial word matching
 //     const foundSkills = TECHNICAL_SKILLS.filter(skill => {
 //       // Escape special regex characters
 //       const escapedSkill = skill.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
-      
+
 //       let pattern;
 //       if (skill.endsWith('+') || skill.endsWith('#')) {
 //         // Special manual word boundary definition for things like c++ and c#
@@ -96,11 +96,11 @@
 //         // Standard word boundary parsing
 //         pattern = `\\\\b${escapedSkill}\\\\b`;
 //       }
-      
+
 //       const regex = new RegExp(pattern, 'i');
 //       return regex.test(lowerText);
 //     });
-    
+
 //     return Array.from(new Set(foundSkills));
 //   } catch (error) {
 //     console.error('Error extracting skills locally:', error);
@@ -261,18 +261,31 @@ import AdmZip from 'adm-zip';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import axios from 'axios';
-import FormData from 'form-data';
 import { AuthRequest } from '../middleware/authMiddleware';
+import pdf from 'pdf-parse-new';
+import mammoth from 'mammoth';
+import { OpenAI } from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const calculateMatchPercentage = (candidateSkills: string[], jobRequirements: string[] | null): number => {
-    if (!jobRequirements || jobRequirements.length === 0 || !candidateSkills || candidateSkills.length === 0) {
-        return 0;
+const extractTextFromPDF = async (filePath: string): Promise<string> => {
+    try {
+        const dataBuffer = fs.readFileSync(filePath);
+        const data = await pdf(dataBuffer);
+        return data.text;
+    } catch (error) {
+        console.error("PDF Parsing Error:", error);
+        return "";
     }
-    const candidateSet = new Set(candidateSkills.map(s => s.toLowerCase().trim()));
-    const jobReqs = jobRequirements.map(s => s.toLowerCase().trim());
-    const matches = jobReqs.filter(skill => candidateSet.has(skill));
-    return (matches.length / jobReqs.length) * 100;
+};
+
+const extractTextFromDOCX = async (filePath: string): Promise<string> => {
+    try {
+        const result = await mammoth.extractRawText({ path: filePath });
+        return result.value;
+    } catch (error) {
+        console.error("DOCX Parsing Error:", error);
+        return "";
+    }
 };
 
 const processResumeFile = async (filePath: string, fileName: string, uploadedBy?: number): Promise<void> => {
@@ -280,32 +293,65 @@ const processResumeFile = async (filePath: string, fileName: string, uploadedBy?
         console.log(`[1] Starting processing for: ${fileName}`);
         const resumeUniqueId = uuidv4();
         const fileExt = path.extname(fileName).toLowerCase();
-        
+
+        let extractedText = '';
+        if (fileExt === '.pdf') {
+            extractedText = await extractTextFromPDF(filePath);
+        } else if (fileExt === '.docx') {
+            extractedText = await extractTextFromDOCX(filePath);
+        } else {
+            console.log(`Unsupported file type: ${fileExt}`);
+            return;
+        }
+
         let extractedData = {
             name: "Unknown Candidate",
             email: `auto-${uuidv4().substring(0, 8)}@example.com`,
+            phoneNumber: "0000000000",
+            summary: "",
+            experience: 0,
             skills: [] as string[]
         };
 
         // 1. AI Extraction
-        if (fileExt === '.pdf' || fileExt === '.docx') {
-            console.log(`[2] Sending to AI Service...`);
-            const form = new FormData();
-            form.append('file', fs.createReadStream(filePath));
-            try {
-                const aiResponse = await axios.post('http://127.0.0.1:5001/process-resume', form, {
-                    headers: { ...form.getHeaders() },
-                    timeout: 10000, // Reduced timeout for testing
+        const aiProvider = (process.env.AI_PROVIDER || 'gemini').toLowerCase();
+        console.log(`[2] Sending to AI Service (${aiProvider})...`);
+        const extractionPrompt = "You are an expert HR assistant. Extract candidate name, email, phone number, a professional summary, an integer representing total years of experience, and a list of technical skills from the resume text. Return STRICTLY a JSON object with this shape: { \"name\": \"string\", \"email\": \"string\", \"phoneNumber\": \"string\", \"summary\": \"string\", \"experience\": number, \"skills\": [\"string\"] }. If any field is missing, provide a reasonable default (e.g. 0 for experience, empty string for summary).";
+
+        try {
+            let aiContent = "{}";
+
+            if (aiProvider === 'gemini') {
+                const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+                const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
+                const prompt = `${extractionPrompt}\n\nResume Text:\n${extractedText.substring(0, 14000)}`;
+                const result = await model.generateContent(prompt);
+                const textResponse = result.response.text();
+                // Clean markdown code blocks from the Gemini output
+                aiContent = textResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+            } else {
+                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                const aiResponse = await openai.chat.completions.create({
+                    model: "openai/gpt-5.4-mini",
+                    messages: [
+                        { role: "system", content: extractionPrompt },
+                        { role: "user", content: extractedText.substring(0, 14000) } // limit characters to avoid token limit
+                    ],
+                    response_format: { type: "json_object" }
                 });
-                if (aiResponse.data) {
-                    extractedData.name = aiResponse.data.name || extractedData.name;
-                    extractedData.email = aiResponse.data.email || extractedData.email;
-                    extractedData.skills = Array.isArray(aiResponse.data.skills) ? aiResponse.data.skills : [];
-                }
-                console.log(`[3] AI Response received. Skills found: ${extractedData.skills.length}`);
-            } catch (aiError: any) {
-                console.error(`[!] AI Service Error: ${aiError.message}. Check if your Python server is running on port 5001.`);
+                aiContent = aiResponse.choices[0].message.content || "{}";
             }
+
+            const parsed = JSON.parse(aiContent);
+            if (parsed.name) extractedData.name = parsed.name;
+            if (parsed.email) extractedData.email = parsed.email;
+            if (parsed.phoneNumber) extractedData.phoneNumber = parsed.phoneNumber;
+            if (parsed.summary) extractedData.summary = parsed.summary;
+            if (typeof parsed.experience === 'number') extractedData.experience = parsed.experience;
+            if (Array.isArray(parsed.skills)) extractedData.skills = parsed.skills;
+            console.log(`[3] AI Response received. Skills found: ${extractedData.skills.length}, Experience: ${extractedData.experience}`);
+        } catch (aiError: any) {
+            console.error(`[!] AI Extraction Error: ${aiError.message}`);
         }
 
         // 2. File Storage
@@ -318,7 +364,7 @@ const processResumeFile = async (filePath: string, fileName: string, uploadedBy?
 
         // 3. Save Resume Record
         console.log(`[4] Inserting resume into Database...`);
-        await db.insert(resumes).values({
+        const insertedResume = await db.insert(resumes).values({
             resumeUniqueId,
             resumeUrl: dbPath,
             extractedSkills: extractedData.skills,
@@ -326,12 +372,14 @@ const processResumeFile = async (filePath: string, fileName: string, uploadedBy?
             fileName: fileName,
             fileSize: fs.statSync(newFilePath).size,
             status: 'processed',
-        });
+        }).returning();
+
+        const resumeId = insertedResume[0].id;
 
         // 4. Fetch Jobs
         console.log(`[5] Fetching open jobs...`);
         const allJobs = await db.select().from(jobOpenings).where(eq(jobOpenings.status, 'open'));
-        
+
         if (allJobs.length === 0) {
             console.log(`[!] No open jobs found in database to match against.`);
             return;
@@ -340,25 +388,55 @@ const processResumeFile = async (filePath: string, fileName: string, uploadedBy?
         console.log(`--- Matching Report for: ${fileName} ---`);
 
         for (const job of allJobs) {
-            console.log(`[6] Calculating match for Job ID: ${job.jobId}`);
-            
-            // Check if calculateMatchPercentage itself is the problem
+            console.log(`[6] Calculating match for Job ID: ${job.jobId} using ${aiProvider}`);
+
             try {
-                const matchScore = calculateMatchPercentage(extractedData.skills, job.requirements);
-                console.log(`> RESULT: Job ${job.jobId} | Match Score: ${matchScore.toFixed(2)}%`);
+                let matchContent = "{}";
+                const matchPrompt = "Evaluate the candidate against the job requirements. Provide a match score from 0 to 100 as an integer based on how well their skills and experience align with the job responsibilities and requirements. Return STRICTLY a JSON object: { \"score\": number }";
+                const matchUserContent = `Candidate Skills: ${extractedData.skills.join(', ')}\nCandidate Experience: ${extractedData.experience} years\nJob Requirements: ${job.requirements?.join(', ')}\nJob Experience Required: ${job.experience}`;
+
+                if (aiProvider === 'gemini') {
+                    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+                    const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
+                    const prompt = `${matchPrompt}\n\n${matchUserContent}`;
+                    const result = await model.generateContent(prompt);
+                    const textResponse = result.response.text();
+
+                    // Clean markdown code blocks from the Gemini output
+                    matchContent = textResponse.replace(/```json/gi, "").replace(/```/g, "").trim();
+                } else {
+                    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                    const matchCompletion = await openai.chat.completions.create({
+                        model: "gpt-3.5-turbo",
+                        messages: [
+                            { role: "system", content: matchPrompt },
+                            { role: "user", content: matchUserContent }
+                        ],
+                        response_format: { type: "json_object" }
+                    });
+                    matchContent = matchCompletion.choices[0].message.content || "{}";
+                }
+
+                const matchScore = JSON.parse(matchContent).score || 0;
+
+                console.log(`> RESULT: Job ${job.jobId} | Match Score: ${matchScore}%`);
 
                 if (matchScore >= 50) {
                     await db.insert(jobApplications).values({
                         jobId: job.jobId,
+                        resumeId: resumeId, // NEW FIELD
+                        matchScore: matchScore, // NEW FIELD
+                        experience: extractedData.experience, // NEW FIELD
+                        summary: extractedData.summary, // NEW FIELD
                         fullName: extractedData.name,
                         email: extractedData.email,
-                        phoneNumber: "0000000000",
+                        phoneNumber: extractedData.phoneNumber,
                         resumeUrl: dbPath,
                         skills: extractedData.skills,
                         consentGiven: true,
                         status: 'pending',
                         appliedAt: new Date(),
-                        notes: `Auto-applied. Match: ${matchScore.toFixed(2)}%`
+                        notes: `Auto-applied. Match: ${matchScore}%`
                     });
                     console.log(`[SUCCESS] Inserted Application.`);
                 }
@@ -395,15 +473,20 @@ export const uploadBulkResumes = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ success: false, message: 'No valid resume files found' });
         }
 
-        // Process sequentially to maintain database stability and AI service load
-        for (const entry of resumeFiles) {
-            const tempDir = path.join(process.cwd(), 'uploads', 'temp');
-            if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-            
-            const tempFilePath = path.join(tempDir, `${Date.now()}-${entry.name}`);
-            fs.writeFileSync(tempFilePath, entry.getData());
-            
-            await processResumeFile(tempFilePath, entry.name, uploadedBy);
+        // Process in batches of 5 to balance processing time and rate limits
+        const tempDir = path.join(process.cwd(), 'uploads', 'temp');
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < resumeFiles.length; i += BATCH_SIZE) {
+            const batch = resumeFiles.slice(i, i + BATCH_SIZE);
+            console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1} of ${Math.ceil(resumeFiles.length / BATCH_SIZE)}`);
+
+            await Promise.all(batch.map(async (entry) => {
+                const tempFilePath = path.join(tempDir, `${Date.now()}-${uuidv4()}-${entry.name}`);
+                fs.writeFileSync(tempFilePath, entry.getData());
+                await processResumeFile(tempFilePath, entry.name, uploadedBy);
+            }));
         }
 
         if (fs.existsSync(zipFilePath)) fs.unlinkSync(zipFilePath);
@@ -422,21 +505,22 @@ export const uploadBulkResumes = async (req: AuthRequest, res: Response) => {
 
 // ... getResumes and getResumeById remain the same
 export const getResumes = async (req: Request, res: Response) => {
-  try {
-    const allResumes = await db.select().from(resumes);
-    res.status(200).json({ success: true, data: allResumes });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch resumes' });
-  }
+    try {
+        const allResumes = await db.select().from(resumes);
+        res.status(200).json({ success: true, data: allResumes });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch resumes' });
+    }
 };
 
 export const getResumeById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const resume = await db.select().from(resumes).where(eq(resumes.id, parseInt(id))).limit(1);
-    if (resume.length === 0) return res.status(404).json({ success: false, message: 'Resume not found' });
-    res.status(200).json({ success: true, data: resume[0] });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch resume' });
-  }
+    try {
+        const { id } = req.params;
+        const resume = await db.select().from(resumes).where(eq(resumes.id, parseInt(id))).limit(1);
+        if (resume.length === 0) return res.status(404).json({ success: false, message: 'Resume not found' });
+        res.status(200).json({ success: true, data: resume[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch resume' });
+    }
 };
+

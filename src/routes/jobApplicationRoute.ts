@@ -49,3 +49,4 @@ router.get('/job/:jobId/candidates', verifyToken, isHRAdmin, getCandidatesByJobI
 router.get('/candidates/:jobId/:id', verifyToken, isHRAdmin, getCandidateByJobIdById);
 
 export default router;
+

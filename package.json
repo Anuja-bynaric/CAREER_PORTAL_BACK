@@ -14,6 +14,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.13.6",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
@@ -23,9 +24,11 @@
     "express": "^5.2.1",
     "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.12.0",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.2",
     "nylas": "^8.0.4",
+    "openai": "^6.33.0",
     "pdf-parse-new": "^2.0.0",
     "pg": "^8.20.0",
     "uuid": "^13.0.0",
