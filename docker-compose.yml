@@ -24,3 +24,4 @@ services:
       - ./CAREER_PORTAL_HR_FRONT:/app
       - /app/node_modules
     working_dir: /app
+

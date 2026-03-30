@@ -22,10 +22,7 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    // console.log(decoded)
     
-    // Check if user still exists in database
-    // console.log( decoded.id)
     const userResult = await db.select().from(users).where(eq(users.id, decoded.id)).limit(1);
     if (!userResult || userResult.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid token user' });
