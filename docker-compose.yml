@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build: ./CAREER_PORTAL_BACK
+    ports:
+      - "5000:5000"
+    # This keeps your .env file working inside the container
+    env_file:
+      - ./CAREER_PORTAL_BACK/.env
+
+  # Frontend Service
+  frontend:
+    build: ./CAREER_PORTAL_HR_FRONT
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000
+
+    volumes:
+      - ./CAREER_PORTAL_HR_FRONT:/app
+      - /app/node_modules
+    working_dir: /app
+
