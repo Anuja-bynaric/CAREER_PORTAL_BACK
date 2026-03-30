@@ -318,26 +318,30 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
   }
 };
 
-export const getMyApplications = async (req: any, res: Response) => {
+export const getMyApplications = async (req: Request, res: Response) => {
   try {
-    const userEmail = req.user?.email;
+    const { email } = req.query;
 
-    if (!userEmail) {
-      return res.status(401).json({ success: false, message: "User not authenticated or email missing." });
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
     }
 
     const applications = await db
-      .select()
+      .select({
+        jobId: jobApplications.jobId,
+        status: jobApplications.status,
+        appliedAt: jobApplications.appliedAt,
+        // If you want the job title, you'll need to join with jobOpenings
+      })
       .from(jobApplications)
-      .where(eq(jobApplications.email, userEmail));
+      .where(eq(jobApplications.email, String(email)));
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      count: applications.length,
       data: applications
     });
   } catch (error) {
-    console.error("Get My Applications Error:", error);
-    res.status(500).json({ success: false, message: "Failed to fetch your applications." });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
