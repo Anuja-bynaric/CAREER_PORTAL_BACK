@@ -11,6 +11,7 @@ import interviewerRoute from './src/routes/interviewerRoute';
 import resumeRoute from './src/routes/resumeRoute';
 import googleAuthRoutes from "./src/routes/googleAuth";
 import { scheduleInterview } from './src/controllers/interview.controller';
+import analyticsRoute from './src/routes/analytics.routes';
 // import calendarRoute from './src/routes/calendarRoute';
 
 const app = express();
@@ -39,6 +40,8 @@ app.use('/admin/resumes', resumeRoute);
 app.use('/admin/applications', jobApplicationRoute); // moved to /admin/applications instead of sharing /admin exactly
 
 app.use("/auth", googleAuthRoutes);
+
+app.use('/analytics', analyticsRoute);
 
 // Protect standalone /schedule with HR admin auth? Left as is, but it seems there's a duplicate... actually I'll just remove the duplicate if it exists, or just leave it.
 
