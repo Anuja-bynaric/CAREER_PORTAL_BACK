@@ -254,7 +254,7 @@ export const getCandidatesByJobId = async (req: Request, res: Response) => {
         skills: jobApplications.skills,
       })
       .from(jobApplications)
-      .where(eq(jobApplications.jobId, jobId)) 
+      .where(eq(jobApplications.jobId, jobId))
       .orderBy(jobApplications.appliedAt);
 
     if (applications.length === 0) {
@@ -295,7 +295,7 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
     if (application.length === 0) {
       return res.status(404).json({ success: false, message: "Candidate not found for this job." });
     }
-    
+
     res.status(200).json({
       success: true,
       message: `Candidate details for job ${jobId} and candidate ${id}`,
@@ -309,4 +309,31 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
 };
 
 export const getMyApplications = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const applications = await db
+      .select({
+        jobId: jobApplications.jobId,
+        status: jobApplications.status,
+        appliedAt: jobApplications.appliedAt,
+        // If you want the job title, you'll need to join with jobOpenings
+      })
+      .from(jobApplications)
+      .where(eq(jobApplications.email, String(email)));
+
+    return res.status(200).json({
+      success: true,
+      data: applications
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
 };
+
+
