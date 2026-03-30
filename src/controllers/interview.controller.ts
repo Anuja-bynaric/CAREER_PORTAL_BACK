@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from '../config/db';
 import { interviews, jobApplications, users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { createGoogleEvent } from "../services/googleCalendar";
 import { transporter } from '../utils/mailer';
 import { createMeetEvent } from '../utils/googleCalendar';
@@ -275,27 +275,44 @@ export const updateInterviewStatus = async (req: Request, res: Response) => {
   }
 };
 
-export const getInterviews = async (req: Request, res: Response) => {
+export const getInterviews = async (req: any, res: Response) => {
   try {
-    const allInterviews = await db.select().from(interviews);
+    const { userId, role } = req.user;
+    
+    let query = db.select().from(interviews);
+    
+    if (role === 'interviewer') {
+      // @ts-ignore
+      query = query.where(eq(interviews.interviewerId, userId));
+    }
+    
+    const allInterviews = await query;
     res.status(200).json({ success: true, count: allInterviews.length, data: allInterviews });
   } catch (error) {
+    console.error('Get Interviews Error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch interviews.' });
   }
 };
 
-export const getInterviewById = async (req: Request, res: Response) => {
+export const getInterviewById = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const { userId, role } = req.user;
 
-    const interview = await db
+    let query = db
       .select()
       .from(interviews)
-      .where(eq(interviews.id, Number(id)))
-      .limit(1);
+      .where(eq(interviews.id, Number(id)));
+
+    if (role === 'interviewer') {
+      // @ts-ignore
+      query = query.where(and(eq(interviews.id, Number(id)), eq(interviews.interviewerId, userId)));
+    }
+
+    const interview = await query.limit(1);
 
     if (interview.length === 0) {
-      return res.status(404).json({ success: false, message: 'Interview not found.' });
+      return res.status(404).json({ success: false, message: 'Interview not found or unauthorized.' });
     }
 
     res.status(200).json({ success: true, data: interview[0] });
@@ -305,15 +322,22 @@ export const getInterviewById = async (req: Request, res: Response) => {
   }
 };
 
-export const getInterviewsByApplication = async (req: Request, res: Response) => {
+export const getInterviewsByApplication = async (req: any, res: Response) => {
   try {
     const { applicationId } = req.params;
+    const { userId, role } = req.user;
 
-    const applicationInterviews = await db
+    let query = db
       .select()
       .from(interviews)
-      .where(eq(interviews.jobApplicationId, Number(applicationId)))
-      .orderBy(interviews.scheduledAt);
+      .where(eq(interviews.jobApplicationId, Number(applicationId)));
+
+    if (role === 'interviewer') {
+      // @ts-ignore
+      query = query.where(and(eq(interviews.jobApplicationId, Number(applicationId)), eq(interviews.interviewerId, userId)));
+    }
+
+    const applicationInterviews = await query.orderBy(interviews.scheduledAt);
 
     res.status(200).json({
       success: true,
@@ -456,5 +480,47 @@ export const cancelInterview = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Cancel Interview Error:', error);
     res.status(500).json({ success: false, message: 'Failed to cancel interview.' });
+  }
+};
+
+export const submitFeedback = async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { feedback, rating, status = 'completed' } = req.body;
+    const { userId, role } = req.user;
+
+    if (!feedback || rating === undefined) {
+      return res.status(400).json({ success: false, message: 'Feedback and rating are required.' });
+    }
+
+    let whereClause = eq(interviews.id, Number(id));
+    if (role === 'interviewer') {
+      // @ts-ignore
+      whereClause = and(eq(interviews.id, Number(id)), eq(interviews.interviewerId, userId));
+    }
+
+    const updatedInterview = await db
+      .update(interviews)
+      .set({
+        feedback,
+        rating,
+        status,
+        updatedAt: new Date(), 
+      } as any)
+      .where(whereClause)
+      .returning();
+
+    if (updatedInterview.length === 0) {
+      return res.status(404).json({ success: false, message: 'Interview not found or unauthorized.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Feedback submitted successfully',
+      data: updatedInterview[0],
+    });
+  } catch (error) {
+    console.error('Submit Feedback Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to submit feedback.' });
   }
 };

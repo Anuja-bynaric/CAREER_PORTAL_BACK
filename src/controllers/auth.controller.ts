@@ -40,43 +40,54 @@ export const loginUser = async (req: Request, res: Response) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    // 5. FETCH REAL APPLICATION HISTORY
-    const userHistory = await db
-      .select({
-        jobId: jobApplications.jobId,
-        jobTitle: jobOpenings.title,
-        appliedDate: jobApplications.appliedAt,
-        status: jobApplications.status,
-        phoneNumber: jobApplications.phoneNumber,
-        skills: jobApplications.skills,
-        resumeUrl: jobApplications.resumeUrl
-      })
-      .from(jobApplications)
-      .leftJoin(jobOpenings, eq(jobApplications.jobId, jobOpenings.jobId))
-      .where(eq(jobApplications.email, email));
+    // 5. FETCH REAL APPLICATION HISTORY (ONLY FOR CANDIDATES)
+    if (user.role === 'candidate' || user.role === 'user') {
+      const userHistory = await db
+        .select({
+          jobId: jobApplications.jobId,
+          jobTitle: jobOpenings.title,
+          appliedDate: jobApplications.appliedAt,
+          status: jobApplications.status,
+          phoneNumber: jobApplications.phoneNumber,
+          skills: jobApplications.skills,
+          resumeUrl: jobApplications.resumeUrl
+        })
+        .from(jobApplications)
+        .leftJoin(jobOpenings, eq(jobApplications.jobId, jobOpenings.jobId))
+        .where(eq(jobApplications.email, email));
 
-    const lastApp = userHistory.length > 0 ? userHistory[userHistory.length - 1] : null;
+      const lastApp = userHistory.length > 0 ? userHistory[userHistory.length - 1] : null;
 
-    const appliedIds = userHistory.map(app => app.jobId);
+      // 6a. Return data with token set in cookie for Candidates
+      return res.status(200).json({
+        success: true,
+        token: token,
+        user: {
+          name: user.name,
+          email: user.email,
+          role: user.role || 'user',
+          phoneNumber: lastApp?.phoneNumber || '',
+          skills: lastApp?.skills || [],
+          savedResumeName: lastApp?.resumeUrl || null,
+          appliedJobIds: userHistory.map(app => app.jobId).filter((id): id is string => !!id),
+          applications: userHistory.map(app => ({
+            jobTitle: app.jobTitle || "Unknown Position",
+            appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : 'N/A',
+            status: app.status || 'pending'
+          }))
+        }
+      });
+    }
 
-    // 6. Return data with token set in cookie
-    res.status(200).json({
+    // 6b. Return data with token set in cookie for Interviewers and HR/Admin
+    return res.status(200).json({
       success: true,
       token: token,
       user: {
         name: user.name,
         email: user.email,
-        role: user.role || 'user',
-        // We pull these from 'lastApp' (the history), NOT the 'user' object
-        phoneNumber: lastApp?.phoneNumber || '',
-        skills: lastApp?.skills || [],
-        savedResumeName: lastApp?.resumeUrl || null,
-        appliedJobIds: userHistory.map(app => app.jobId).filter((id): id is string => !!id),
-        applications: userHistory.map(app => ({
-          jobTitle: app.jobTitle || "Unknown Position",
-          appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : 'N/A',
-          status: app.status || 'pending'
-        }))
+        role: user.role,
+        phoneNumber: user.phoneNumber || ''
       }
     });
 

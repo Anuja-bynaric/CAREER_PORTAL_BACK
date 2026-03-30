@@ -10,6 +10,7 @@ export interface AuthRequest extends Request {
   user?: {
     userId: number;
     role: string;
+    email: string;
   };
 }
 
@@ -32,7 +33,8 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
 
     req.user = {
       userId: userResult[0].id,
-      role: userResult[0].role
+      role: userResult[0].role,
+      email: userResult[0].email
     };
 
     next();
@@ -51,5 +53,31 @@ export const isHRAdmin = (req: AuthRequest, res: Response, next: NextFunction) =
     next();
   } else {
     return res.status(403).json({ success: false, message: 'Forbidden: Requires HR/Admin privileges' });
+  }
+};
+
+export const isInterviewer = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  // HR/Admin and Interviewers can access interviewer routes
+  if (req.user.role === 'admin' || req.user.role === 'hr' || req.user.role === 'interviewer') {
+    next();
+  } else {
+    return res.status(403).json({ success: false, message: 'Forbidden: Requires Interviewer or HR/Admin privileges' });
+  }
+};
+
+export const isCandidate = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  // HR/Admin and Candidates can access candidate routes
+  if (req.user.role === 'admin' || req.user.role === 'hr' || req.user.role === 'candidate') {
+    next();
+  } else {
+    return res.status(403).json({ success: false, message: 'Forbidden: Requires Candidate or HR/Admin privileges' });
   }
 };

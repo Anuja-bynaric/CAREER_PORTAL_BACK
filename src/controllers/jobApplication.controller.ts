@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../config/db';
-import { jobApplications, users } from '../db/schema';
+import { jobApplications, users, interviews } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import path from 'path';
 import jwt from 'jsonwebtoken';
@@ -254,7 +254,7 @@ export const getCandidatesByJobId = async (req: Request, res: Response) => {
         skills: jobApplications.skills,
       })
       .from(jobApplications)
-      .where(eq(jobApplications.jobId, jobId)) 
+      .where(eq(jobApplications.jobId, jobId as string)) 
       .orderBy(jobApplications.appliedAt);
 
     if (applications.length === 0) {
@@ -287,7 +287,7 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
       .select()
       .from(jobApplications)
       .where(and(
-        eq(jobApplications.jobId, jobId),
+        eq(jobApplications.jobId, jobId as string),
         eq(jobApplications.id, Number(id))
       ))
       .limit(1);
@@ -295,11 +295,21 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
     if (application.length === 0) {
       return res.status(404).json({ success: false, message: "Candidate not found for this job." });
     }
+
+    // Fetch associated interviews (Rounds)
+    const associatedInterviews = await db
+      .select()
+      .from(interviews)
+      .where(eq(interviews.jobApplicationId, Number(id)))
+      .orderBy(interviews.scheduledAt);
     
     res.status(200).json({
       success: true,
       message: `Candidate details for job ${jobId} and candidate ${id}`,
-      data: application[0]
+      data: {
+        ...application[0],
+        interviews: associatedInterviews
+      }
     });
   } catch (error) {
     console.error("Get Candidate by JobId and CandidateId Error:", error);
@@ -308,5 +318,26 @@ export const getCandidateByJobIdById = async (req: Request, res: Response) => {
   }
 };
 
-export const getMyApplications = async (req: Request, res: Response) => {
+export const getMyApplications = async (req: any, res: Response) => {
+  try {
+    const userEmail = req.user?.email;
+
+    if (!userEmail) {
+      return res.status(401).json({ success: false, message: "User not authenticated or email missing." });
+    }
+
+    const applications = await db
+      .select()
+      .from(jobApplications)
+      .where(eq(jobApplications.email, userEmail));
+
+    res.status(200).json({
+      success: true,
+      count: applications.length,
+      data: applications
+    });
+  } catch (error) {
+    console.error("Get My Applications Error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch your applications." });
+  }
 };
