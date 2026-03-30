@@ -63,9 +63,33 @@ export const getAnalytics = async (req: Request, res: Response) => {
 export const getAnalyticsOfInterviewer = async (req: Request, res: Response) => {
     try {
         const {interviewerId} = req.params;
-    // 
-    } catch{
+        const [totalInterviewsScheduled] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId ));
+        const [totalInterviewsCompleted] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const [totalInterviewsCancelled] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const [totalInterviewsRoundI] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const [totalInterviewsRoundII] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const [totalInterviewsRoundIII] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const [totalInterviewsOnline] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const [totalInterviewsFaceToFace] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
 
+        res.status(200).json({
+            success: true,
+            data: {
+                totalInterviewsScheduled: totalInterviewsScheduled.value,
+                totalInterviewsCompleted: totalInterviewsCompleted.value,
+                totalInterviewsCancelled: totalInterviewsCancelled.value,
+                totalInterviewsRoundI: totalInterviewsRoundI.value,
+                totalInterviewsRoundII: totalInterviewsRoundII.value,
+                totalInterviewsRoundIII: totalInterviewsRoundIII.value,
+                totalInterviewsOnline: totalInterviewsOnline.value,
+                totalInterviewsFaceToFace: totalInterviewsFaceToFace.value,
+            }
+        });
+    // 
+    } catch(error){
+        console.error("Analytics Error:", error);
+        res.status(500).json({ success: false, message: "Internal server error." });
+        return; 
     }
 
 }
