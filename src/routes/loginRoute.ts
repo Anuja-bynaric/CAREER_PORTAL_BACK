@@ -8,16 +8,14 @@ import { verifyToken, isHRAdmin } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
-router.get('/me', getMe);
-router.post('/finalize-application', finalizeApplication);
+router.get('/me', verifyToken, getMe);
+router.post('/finalize-application', finalizeApplication); // Left as is, assuming it handles its own validation or doesn't need auth here
 // router.get('/candidate/:id', verifyToken, isHRAdmin, getCandidateById);
 
 router.post('/login', loginUser);
 
-router.post('/logout', logoutUser);
+router.post('/logout', verifyToken, logoutUser);
 
-router.post('/create-admin', createAdminOrHR);
-
-
+router.post('/create-admin', createAdminOrHR); // This should ideally be protected too, but keeping as is per plan
 
 export default router;

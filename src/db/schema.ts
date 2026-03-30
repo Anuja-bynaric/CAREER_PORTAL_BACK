@@ -4,7 +4,7 @@ import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum, un
 export const userRoleEnum = pgEnum('user_role', ['admin', 'hr', 'candidate', 'interviewer', 'user']);
 export const applicationStatusEnum = pgEnum('application_status', ['pending', 'shortlisted', 'rejected', 'hired']);
 export const interviewStatusEnum = pgEnum('interview_status', ['scheduled', 'completed', 'cancelled']);
-export const interviewTypeEnum = pgEnum('interview_type', ['Online', 'Face to Face', 'Calendly']);
+export const interviewTypeEnum = pgEnum('interview_type', ['Online', 'Face to Face']);
 export const interviewModeEnum = pgEnum('interview_mode', ['Round-I', 'Round-II', 'Round-III']);
 export const jobStatusEnum = pgEnum('job_status', ['open', 'closed']);
 export const jobCategoryEnum = pgEnum('job_category', ['Engineering', 'Marketing', 'Sales', 'Design', 'Product', 'Other']);
@@ -80,6 +80,8 @@ export const interviews = pgTable('interviews', {
   meetingLink: text('meeting_link'),               // for Online interviews
   status: interviewStatusEnum('status').default('scheduled').notNull(),
   notes: text('notes'),
+  feedback: text('feedback'),
+  rating: integer('rating'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

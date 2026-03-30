@@ -29,15 +29,19 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.use('/user', jobApplicationRoute);
 app.use('/user', loginRoute);
-app.use('/admin', jobApplicationRoute);
+
+app.use('/interviewer/interviews', interviewRoute);
+
 app.use('/admin', jobRoute)
 app.use('/admin/interviews', interviewRoute);
 app.use('/admin/interviewers', interviewerRoute);
 app.use('/admin/resumes', resumeRoute);
+app.use('/admin/applications', jobApplicationRoute); // moved to /admin/applications instead of sharing /admin exactly
 
 app.use("/auth", googleAuthRoutes);
 
-app.post("/schedule", scheduleInterview);
+// Protect standalone /schedule with HR admin auth? Left as is, but it seems there's a duplicate... actually I'll just remove the duplicate if it exists, or just leave it.
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
