@@ -2,7 +2,15 @@ import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum, un
 
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'hr', 'candidate', 'interviewer', 'user']);
-export const applicationStatusEnum = pgEnum('application_status', ['pending', 'shortlisted', 'rejected', 'hired']);
+export const applicationStatusEnum = pgEnum('application_status', [
+  'pending', 
+  'shortlisted', 
+  'shortlisted for Technical Round', 
+  'shortlisted for HR Round', 
+  'shortlisted for Managerial Round', 
+  'rejected', 
+  'hired'
+]);
 export const interviewStatusEnum = pgEnum('interview_status', ['scheduled', 'completed', 'cancelled']);
 export const interviewTypeEnum = pgEnum('interview_type', ['Online', 'Face to Face']);
 export const interviewModeEnum = pgEnum('interview_mode', ['Round-I', 'Round-II', 'Round-III']);
