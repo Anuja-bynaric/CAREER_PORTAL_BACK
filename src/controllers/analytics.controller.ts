@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { interviews, jobApplications, users, jobOpenings } from "../db/schema";
 import { db } from "../config/db";
-import { eq, count } from "drizzle-orm";
+import { eq, count, inArray } from "drizzle-orm";
 
 export const getAnalytics = async (req: Request, res: Response) => {
     try {
@@ -11,7 +11,12 @@ export const getAnalytics = async (req: Request, res: Response) => {
         const [interviewerCount] = await db.select({ value: count() }).from(users).where(eq(users.role, 'interviewer'));
         // const [hrAdminCount] = await db.select({ value: count() }).from(users).where(eq(users.role, 'hr'));
         const [candidateCount] = await db.select({ value: count() }).from(users).where(eq(users.role, 'candidate'));
-        const [shortlistedApplications] = await db.select({ value: count() }).from(jobApplications).where(eq(jobApplications.status, 'shortlisted'));
+        const [shortlistedApplications] = await db.select({ value: count() }).from(jobApplications).where(inArray(jobApplications.status, [
+            'shortlisted', 
+            'shortlisted for Technical Round', 
+            'shortlisted for HR Round', 
+            'shortlisted for Managerial Round'
+        ]));
         const [rejectedApplications] = await db.select({ value: count() }).from(jobApplications).where(eq(jobApplications.status, 'rejected'));
         // const [interviewScheduledApplications] = await db.select({ value: count() }).from(jobApplications).where(eq(jobApplications.status, 'scheduled'));
         const [hiredApplications] = await db.select({ value: count() }).from(jobApplications).where(eq(jobApplications.status, 'hired'));
@@ -62,15 +67,16 @@ export const getAnalytics = async (req: Request, res: Response) => {
 
 export const getAnalyticsOfInterviewer = async (req: Request, res: Response) => {
     try {
-        const {interviewerId} = req.params;
-        const [totalInterviewsScheduled] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId ));
-        const [totalInterviewsCompleted] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
-        const [totalInterviewsCancelled] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
-        const [totalInterviewsRoundI] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
-        const [totalInterviewsRoundII] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
-        const [totalInterviewsRoundIII] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
-        const [totalInterviewsOnline] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
-        const [totalInterviewsFaceToFace] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerId));
+        const { interviewerId } = req.params;
+        const interviewerIdNum = Number(interviewerId);
+        const [totalInterviewsScheduled] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum ));
+        const [totalInterviewsCompleted] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
+        const [totalInterviewsCancelled] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
+        const [totalInterviewsRoundI] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
+        const [totalInterviewsRoundII] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
+        const [totalInterviewsRoundIII] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
+        const [totalInterviewsOnline] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
+        const [totalInterviewsFaceToFace] = await db.select({ value: count() }).from(interviews).where(eq(interviews.interviewerId, interviewerIdNum));
 
         res.status(200).json({
             success: true,

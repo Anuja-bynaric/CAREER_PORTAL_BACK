@@ -209,7 +209,7 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
-    if (!['pending', 'shortlisted', 'rejected', 'hired'].includes(status)) {
+    if (!['pending', 'shortlisted', 'shortlisted for Technical Round', 'shortlisted for HR Round', 'shortlisted for Managerial Round', 'rejected', 'hired'].includes(status)) {
       return res.status(400).json({ success: false, message: "Invalid status value." });
     }
 
